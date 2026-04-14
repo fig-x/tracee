@@ -34,7 +34,7 @@ The **Graph Viewer** is designed for the outer loop. It separates what your syst
 ### 1. Clone the repository
 
 ```bash
-git clone <REPO_URL>
+git clone https://github.com/fig-x/tracee.git
 cd tracee
 ```
 
