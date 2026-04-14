@@ -44,14 +44,13 @@ We recommend using [uv](https://docs.astral.sh/uv/) for fast, reliable dependenc
 
 ```bash
 uv add 'tracee[server]'
-source .venv/bin/activate
 ```
 
 ### 3. Start the server
 
 
 ```bash
-tracee serve
+uv run tracee serve
 ```
 
 Override the port and host:

@@ -126,7 +126,7 @@ const pages: PageDef[] = [
 /* ── code snippets ─────────────────────────────────── */
 const cloneSnippet = `git clone https://github.com/fig-x/tracee.git\ncd tracee`;
 const installSnippet = `uv add 'tracee[server]'`;
-const startServerSnippet = `tracee serve`;
+const startServerSnippet = `uv run tracee serve`;
 const startServerOptionsSnippet = `tracee serve --port 8000 --host 0.0.0.0`;
 const envSnippet = `# .env (in the directory where you run tracee serve)
 OPENAI_API_KEY=sk-...`;
