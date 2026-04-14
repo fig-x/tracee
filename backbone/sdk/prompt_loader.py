@@ -1,0 +1,230 @@
+"""Prompt loader SDK for referencing prompts in agent code.
+
+so that users can retrieve a prompt they created in the UI with one line of code
+system_prompt = loader.get("planner-prompt", "v2")
+"""
+
+from __future__ import annotations
+
+import warnings
+
+import httpx
+
+from backbone.models.prompt_artifact import PromptVersion
+
+
+class PromptLoaderError(Exception):
+    """Exception raised when prompt loading fails."""
+    pass
+
+
+class PromptLoader:
+    """Load prompts from the server for use in agent code.
+    
+    Added caching to avoid repeated network calls for the same prompt.
+    """
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8000",
+        timeout: float = 10.0,
+    ) -> None:
+        """        
+        Args:
+            base_url: Base URL of the tracee server
+            timeout: HTTP request timeout in seconds
+        """
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self.registry_timeout = min(timeout, 2.0)
+        self._cache: dict[tuple[str, str], PromptVersion] = {}
+        self._agent_prompt_cache: dict[str, tuple[str, str]] = {}
+
+    def _fetch_version(self, prompt_id: str, version_id: str) -> PromptVersion:
+        """Fetch a prompt version from the server."""
+        cache_key = (prompt_id, version_id)
+        
+        # check cache first and see if it's a repeated request
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+        
+        # fetch from server
+        url = f"{self.base_url}/api/prompts/{prompt_id}/versions/{version_id}"
+        
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                response = client.get(url)
+                
+                if response.status_code == 404:
+                    raise PromptLoaderError(
+                        f"Prompt version not found: {prompt_id}/{version_id}"
+                    )
+                
+                response.raise_for_status()
+                data = response.json()
+                version = PromptVersion.model_validate(data)
+                
+                # cache for future use
+                self._cache[cache_key] = version
+                return version
+                
+        except httpx.RequestError as e:
+            raise PromptLoaderError(
+                f"Failed to connect to server at {self.base_url}: {e}"
+            ) from e
+
+    def _fetch_latest(self, prompt_id: str) -> PromptVersion:
+        """
+        The option to fetch the latest version of a prompt from the server.
+        Having this since we store the latest version id with any prompt
+        """
+        url = f"{self.base_url}/api/prompts/{prompt_id}/latest"
+        
+        try:
+            with httpx.Client(timeout=self.timeout) as client:
+                response = client.get(url)
+                
+                if response.status_code == 404:
+                    raise PromptLoaderError(
+                        f"Prompt not found or has no versions: {prompt_id}"
+                    )
+                
+                response.raise_for_status()
+                data = response.json()
+                version = PromptVersion.model_validate(data)
+                
+                # Cache with actual version ID
+                self._cache[(prompt_id, version.version_id)] = version
+                return version
+                
+        except httpx.RequestError as e:
+            raise PromptLoaderError(
+                f"Failed to connect to server at {self.base_url}: {e}"
+            ) from e
+
+    def get_version(
+        self,
+        prompt_id: str,
+        version_id: str = "latest",
+    ) -> PromptVersion:
+        """Get a full PromptVersion object.
+        
+        Args:
+            prompt_id: The prompt identifier
+            version_id: The version to load ("latest" for most recent)
+            
+        Returns:
+            The PromptVersion object with all components
+        """
+        if version_id == "latest":
+            return self._fetch_latest(prompt_id)
+        return self._fetch_version(prompt_id, version_id)
+
+    def get(
+        self,
+        prompt_id: str,
+        version_id: str = "latest",
+        agent_id: str | None = None,
+    ) -> str:
+        """Get resolved prompt text by ID and version.
+        
+        Args:
+            prompt_id: The prompt identifier
+            version_id: The version to load ("latest" for most recent)
+            agent_id: Optional agent identifier reserved for compatibility
+            
+        Returns:
+            The resolved prompt text (all enabled components concatenated)
+        """
+        version = self.get_version(prompt_id, version_id)
+        self._maybe_upsert_agent_registry(agent_id, version)
+        return version.resolve()
+
+    def get_with_schema(
+        self,
+        prompt_id: str,
+        version_id: str = "latest",
+        agent_id: str | None = None,
+    ) -> tuple[str, dict | None]:
+        """Get resolved prompt text and output schema.
+
+        Convenience method for the common LangChain structured output pattern:
+            text, schema = loader.get_with_schema("my-prompt")
+            llm = ChatOpenAI(model="gpt-4o")
+            if schema:
+                llm = llm.with_structured_output(schema)
+
+        Args:
+            prompt_id: The prompt identifier
+            version_id: The version to load ("latest" for most recent)
+            agent_id: Optional agent identifier reserved for compatibility
+
+        Returns:
+            Tuple of (resolved_text, output_schema) where output_schema is
+            None if not defined on the version.
+        """
+        version = self.get_version(prompt_id, version_id)
+        self._maybe_upsert_agent_registry(agent_id, version)
+        resolved_text = version.resolve()
+        return resolved_text, version.output_schema
+
+    def _maybe_upsert_agent_registry(
+        self,
+        agent_id: str | None,
+        version: PromptVersion,
+    ) -> None:
+        if not agent_id:
+            return
+        cache_key = (version.prompt_id, version.version_id)
+        if self._agent_prompt_cache.get(agent_id) == cache_key:
+            return
+        synced = self._upsert_agent_registry(
+            agent_id=agent_id,
+            prompt_id=version.prompt_id,
+            prompt_version_id=version.version_id,
+        )
+        if synced:
+            self._agent_prompt_cache[agent_id] = cache_key
+
+    def _upsert_agent_registry(
+        self,
+        agent_id: str,
+        prompt_id: str,
+        prompt_version_id: str,
+    ) -> bool:
+        url = f"{self.base_url}/api/agents/{agent_id}"
+        payload = {
+            "prompt_id": prompt_id,
+            "prompt_version_id": prompt_version_id,
+        }
+        try:
+            with httpx.Client(timeout=self.registry_timeout) as client:
+                response = client.put(url, json=payload)
+                response.raise_for_status()
+            return True
+        except httpx.RequestError as e:
+            warnings.warn(
+                f"failed to sync agent registry at {self.base_url}: {e}",
+                stacklevel=2,
+            )
+        except httpx.HTTPStatusError as e:
+            warnings.warn(
+                f"failed to sync agent registry at {self.base_url}: {e}",
+                stacklevel=2,
+            )
+        return False
+
+    def clear_cache(self) -> None:
+        """Clear the prompt cache.
+        """
+        self._cache.clear()
+        self._agent_prompt_cache.clear()
+
+    def preload(self, prompts: list[tuple[str, str]]) -> None:
+        """Preload multiple prompts into the cache.
+        
+        Args:
+            prompts: List of (prompt_id, version_id) tuples to preload
+        """
+        for prompt_id, version_id in prompts:
+            self.get_version(prompt_id, version_id)

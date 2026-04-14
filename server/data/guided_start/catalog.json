@@ -1,0 +1,306 @@
+{
+  "version": "2026-04-13",
+  "generated_at": "2026-04-13T21:14:49.411834+00:00",
+  "analysis_prompt_count": 268,
+  "roles": [
+    {
+      "role_id": "analyst",
+      "name": "analyst",
+      "summary": "interprets data, identifies patterns, and produces analytical insights or recommendations",
+      "sample_size": 43,
+      "components": [
+        {
+          "component_type": "task",
+          "prevalence": 0.98,
+          "placeholder": "Analyze the given {{subject}} to identify and document key elements, patterns, and relationships. Provide a clear, structured report that highlights core components, their interactions, and relevant contextual insights to support understanding and decision-making within {{domain or system}}."
+        },
+        {
+          "component_type": "role",
+          "prevalence": 0.91,
+          "placeholder": "You are an analyst responsible for examining {{subject}} to identify key patterns, structures, and relationships. Your task is to produce a clear, detailed report that interprets the data or system, highlights important components and their interactions, and provides actionable insights or recommendations based on your findings. Focus on accurately describing existing information without making assumptions beyond the provided context."
+        },
+        {
+          "component_type": "inputs",
+          "prevalence": 0.84,
+          "placeholder": "Provide the input data, context, or materials necessary for analysis, including any relevant descriptions, datasets, documents, or system states. Specify the scope and focus areas to guide pattern identification and insight generation for the given task."
+        },
+        {
+          "component_type": "goal",
+          "prevalence": 0.72,
+          "placeholder": "Define the primary analytical objective by specifying the data or information to interpret, the patterns or trends to identify, and the insights or recommendations to generate based on your analysis."
+        },
+        {
+          "component_type": "constraints",
+          "prevalence": 0.7,
+          "placeholder": "Define clear operational boundaries and limitations for the analysis task, including scope restrictions, data access permissions, and expected output format. Specify any rules for handling deviations, required naming conventions, and constraints on resource usage or execution time to ensure focused, consistent, and efficient analytical processing."
+        },
+        {
+          "component_type": "outputs",
+          "prevalence": 0.65,
+          "placeholder": "Produce a detailed analysis or report that interprets the given data or system, identifies key patterns or structures, and provides clear insights or recommendations. Your output should comprehensively document findings, highlight important relationships, and support understanding or decision-making related to {{subject}}."
+        }
+      ]
+    },
+    {
+      "role_id": "coder",
+      "name": "coder",
+      "summary": "writes, modifies, fixes, or generates code",
+      "sample_size": 25,
+      "components": [
+        {
+          "component_type": "constraints",
+          "prevalence": 0.92,
+          "placeholder": "Define clear constraints for code generation and modification, including coding style, testing requirements, debugging practices, scope limitations, file access permissions, and output formatting. Specify any workflow rules, language preferences, and validation checks to ensure code correctness and alignment with project conventions."
+        },
+        {
+          "component_type": "task",
+          "prevalence": 0.92,
+          "placeholder": "Define the coding task by specifying the programming objective, the context or environment, and any constraints or methodologies to follow. Include details about the code to write, modify, debug, or test, the files or modules involved, and any specific workflows or standards to adhere to."
+        },
+        {
+          "component_type": "goal",
+          "prevalence": 0.88,
+          "placeholder": "Define the primary objective for the coding task, specifying the programming language, framework, or environment if relevant. Include any constraints on functionality such as focusing on testing, debugging, feature implementation, or configuration. Describe the expected deliverables, such as code files, tests, or configuration rules, and any workflow or methodology to follow."
+        },
+        {
+          "component_type": "outputs",
+          "prevalence": 0.84,
+          "placeholder": "Generate code outputs that implement {{specific functionality or task}} following best practices such as clear structure, appropriate comments, and adherence to project conventions. Include necessary imports, handle errors or edge cases, and ensure the code is concise, readable, and maintainable."
+        },
+        {
+          "component_type": "role",
+          "prevalence": 0.84,
+          "placeholder": "You are {{role name}}, responsible for writing, modifying, debugging, or generating code to accomplish {{task description}}. Follow best practices such as understanding requirements before coding, maintaining clear structure and style, and ensuring correctness through testing or validation. Work within the specified project constraints and use appropriate tools or languages as needed."
+        },
+        {
+          "component_type": "inputs",
+          "prevalence": 0.8,
+          "placeholder": "Provide the input data, parameters, and any relevant context or instructions needed for the code generation or modification task. Include details such as data schemas, function names, tool selections, or file paths as applicable to guide the coding process."
+        }
+      ]
+    },
+    {
+      "role_id": "extractor",
+      "name": "extractor",
+      "summary": "parses structured data or specific fields from unstructured text",
+      "sample_size": 25,
+      "components": [
+        {
+          "component_type": "outputs",
+          "prevalence": 0.92,
+          "placeholder": "Output the extracted information as a structured string or JSON object containing the specified fields or data points. Ensure the output follows the required format precisely, using consistent naming and structure for each extracted element. Include only the relevant parsed values without additional explanation or commentary."
+        },
+        {
+          "component_type": "inputs",
+          "prevalence": 0.84,
+          "placeholder": "Provide the unstructured text input from which specific fields, keywords, or structured data need to be extracted. Include any relevant details or context that will help identify and parse the required information accurately."
+        },
+        {
+          "component_type": "task",
+          "prevalence": 0.8,
+          "placeholder": "Define the task to extract specific structured data or key fields from unstructured text. Specify the input format, the exact information to identify or parse, any rules or constraints for extraction, and the desired output format or structure."
+        }
+      ]
+    },
+    {
+      "role_id": "orchestrator",
+      "name": "orchestrator",
+      "summary": "manages and coordinates multi-step workflows or pipelines end-to-end",
+      "sample_size": 44,
+      "components": [
+        {
+          "component_type": "goal",
+          "prevalence": 0.98,
+          "placeholder": "Define the overall objective for coordinating a multi-step workflow or pipeline, specifying key phases, milestones, and success criteria. Include any constraints on resources, inputs, outputs, and required interactions between subcomponents or agents to ensure systematic, end-to-end task completion."
+        },
+        {
+          "component_type": "constraints",
+          "prevalence": 0.98,
+          "placeholder": "Define clear operational rules and step-by-step procedures to manage and coordinate multi-step workflows or pipelines. Specify input validation requirements, sequencing and parallelization of tasks, scope of modifications allowed, expected outputs, verification steps, and communication protocols to ensure systematic progress and completion of the overall process."
+        },
+        {
+          "component_type": "task",
+          "prevalence": 0.98,
+          "placeholder": "Define the overall multi-step workflow by outlining each phase or step with clear objectives, inputs, and expected outputs. Specify how tasks should be sequenced, delegated to subagents or components, and coordinated to ensure systematic progress and completion. Include criteria for validation, verification, and reporting to maintain quality and track progress throughout the process."
+        },
+        {
+          "component_type": "outputs",
+          "prevalence": 0.89,
+          "placeholder": "Define the expected outputs for the multi-step workflow, specifying the format, structure, and key deliverables at each stage. Include any reporting, verification results, or artifacts that demonstrate progress and completion of the coordinated tasks."
+        },
+        {
+          "component_type": "role",
+          "prevalence": 0.89,
+          "placeholder": "You are an orchestrator responsible for managing and coordinating a multi-step workflow or pipeline end-to-end. Define your role by specifying the overall process stages, the sequence of tasks, and how you delegate subtasks to specialized agents or components. Include guidelines for input validation, parallel or sequential execution, progress tracking, and ensuring completion with verification and reporting."
+        },
+        {
+          "component_type": "inputs",
+          "prevalence": 0.86,
+          "placeholder": "Provide a detailed list of all required inputs, including files, environment settings, credentials, and any other resources necessary to initiate and coordinate the multi-step workflow or pipeline. Specify input formats, locations, and any validation criteria to ensure smooth orchestration and execution."
+        },
+        {
+          "component_type": "tool_instructions",
+          "prevalence": 0.7,
+          "placeholder": "You are {{agent_name}}, responsible for managing and coordinating multi-step workflows to achieve {{overall_goal}}. Your instructions: validate inputs before starting, sequence tasks into clear phases, delegate subtasks to specialized agents, monitor progress and quality at each step, ensure systematic verification and iteration, and produce comprehensive reports on outcomes. Maintain strict control over task completion and resource usage, adapting plans as needed to meet deadlines and quality standards."
+        }
+      ]
+    },
+    {
+      "role_id": "planner",
+      "name": "planner",
+      "summary": "decomposes tasks, creates execution plans, or determines sequencing of steps",
+      "sample_size": 43,
+      "components": [
+        {
+          "component_type": "task",
+          "prevalence": 0.95,
+          "placeholder": "Define the overall task by specifying the main objective and desired outcome. Break down the task into clear, sequential steps or phases, outlining key actions, goals, and criteria for success. Include any constraints, assumptions, or context necessary to guide execution and ensure alignment with the intended purpose."
+        },
+        {
+          "component_type": "goal",
+          "prevalence": 0.93,
+          "placeholder": "Define the overall objective for {{project or task}} by specifying the desired outcomes, key milestones, and success criteria. Include any constraints, assumptions, or priorities that will guide the planning and execution process."
+        },
+        {
+          "component_type": "constraints",
+          "prevalence": 0.91,
+          "placeholder": "Define clear constraints that guide the planning and execution of {{task or project}}. Specify any limitations on scope, resources, tools, or methods, and outline rules to ensure consistent, stepwise progress toward {{goal or deliverable}} while maintaining quality and alignment with user requirements."
+        },
+        {
+          "component_type": "inputs",
+          "prevalence": 0.91,
+          "placeholder": "Provide the key inputs and context necessary for planning the task, including any relevant descriptions, user instructions, current phase or step information, and specific sub-tasks or aspects to focus on. Include details that will guide the decomposition of the overall task into sequenced steps or components."
+        },
+        {
+          "component_type": "outputs",
+          "prevalence": 0.86,
+          "placeholder": "Outline a clear, step-by-step plan to accomplish {{task or project name}}. Break down the overall goal into logical phases or milestones, specifying key actions, deliverables, and criteria for progress at each stage. Include any assumptions, constraints, or dependencies that affect the sequence or execution of steps."
+        },
+        {
+          "component_type": "role",
+          "prevalence": 0.72,
+          "placeholder": "You are {{role name}}, responsible for breaking down {{task description}} into clear, manageable steps or phases. Define the sequence of actions, key goals, constraints, and criteria for success, ensuring a logical flow and prioritization to guide execution effectively."
+        },
+        {
+          "component_type": "external_information",
+          "prevalence": 0.65,
+          "placeholder": ""
+        }
+      ]
+    },
+    {
+      "role_id": "reviewer",
+      "name": "reviewer",
+      "summary": "evaluates quality, correctness, or compliance of work products",
+      "sample_size": 16,
+      "components": [
+        {
+          "component_type": "outputs",
+          "prevalence": 1.0,
+          "placeholder": "Evaluate the quality, accuracy, completeness, and adherence to required criteria of the provided work product. Identify strengths, weaknesses, gaps, and areas needing improvement, and provide a structured assessment with clear recommendations for revision or acceptance."
+        },
+        {
+          "component_type": "role",
+          "prevalence": 1.0,
+          "placeholder": "You are an expert reviewer tasked with evaluating {{work product}} for quality, accuracy, completeness, and compliance with {{criteria}}. Provide a detailed assessment highlighting strengths, weaknesses, gaps, and suggestions for improvement. Use structured criteria to guide your evaluation and clearly indicate if revisions are needed."
+        },
+        {
+          "component_type": "task",
+          "prevalence": 1.0,
+          "placeholder": "Evaluate the quality, accuracy, and completeness of the {{work product}} by identifying strengths, weaknesses, gaps, and areas for improvement. Provide a structured assessment including summary, criteria ratings, and specific recommendations to ensure compliance with {{standards or requirements}}."
+        },
+        {
+          "component_type": "constraints",
+          "prevalence": 0.94,
+          "placeholder": "Define clear criteria and guidelines to evaluate the quality, accuracy, completeness, and compliance of {{work product}}. Specify the aspects to assess, the standards to apply, and the format for reporting findings and decisions. Include instructions on how to identify gaps, errors, or areas needing improvement, and how to prioritize follow-up actions if applicable."
+        },
+        {
+          "component_type": "goal",
+          "prevalence": 0.88,
+          "placeholder": "Define the evaluation goal by specifying the criteria and standards to assess the quality, accuracy, completeness, and compliance of the {{work product}}. Include key aspects to verify, such as identifying gaps, errors, or inconsistencies, and outline the desired outcome or decision based on the evaluation."
+        },
+        {
+          "component_type": "inputs",
+          "prevalence": 0.88,
+          "placeholder": "Provide the relevant input data and context needed for the evaluation, including the item to be reviewed, any supporting materials or baseline knowledge, specific criteria or standards to assess against, and any additional instructions or constraints to guide the quality, correctness, or compliance assessment."
+        }
+      ]
+    },
+    {
+      "role_id": "router",
+      "name": "router",
+      "summary": "dispatches work to other agents or selects the right tool/path",
+      "sample_size": 11,
+      "components": [
+        {
+          "component_type": "goal",
+          "prevalence": 1.0,
+          "placeholder": "Define the overall objective for routing tasks by specifying how to analyze the incoming request, determine the appropriate specialized agents or tools to handle different aspects, and decide the correct format or pathway for processing the request. Include criteria for classification, delegation, and any constraints on tool usage or output format."
+        },
+        {
+          "component_type": "inputs",
+          "prevalence": 0.82,
+          "placeholder": "Provide the input data and context needed to determine how to route tasks or queries to the appropriate agents or tools. Include the original user request, any relevant background or knowledge gaps, history of prior actions, and criteria or rules for selecting among available specialized agents or processing paths."
+        },
+        {
+          "component_type": "role",
+          "prevalence": 0.82,
+          "placeholder": "Define the role responsible for evaluating incoming requests or tasks, determining the appropriate specialized agents, tools, or workflows to handle each, and dispatching work accordingly. Specify criteria for routing decisions, how to interpret user inputs to select the correct processing path, and any constraints or priorities guiding the selection process."
+        },
+        {
+          "component_type": "constraints",
+          "prevalence": 0.73,
+          "placeholder": "Define clear rules and criteria for selecting the appropriate agent or tool based on the user's query and context. Specify how to interpret input types, determine routing decisions, prioritize resources, and handle edge cases to ensure accurate dispatching to specialized agents or workflows."
+        },
+        {
+          "component_type": "task",
+          "prevalence": 0.73,
+          "placeholder": "Define the task of evaluating the incoming user query or context to determine the appropriate agent, tool, or processing path to handle it. Specify criteria for routing decisions, including how to parse the query, identify relevant sub-tasks, and assign them to specialized agents or tools with clear instructions for each."
+        },
+        {
+          "component_type": "outputs",
+          "prevalence": 0.64,
+          "placeholder": "Decide which specialized agent or tool is best suited to handle the user's request or knowledge gap. Specify the selected agents and provide concise, targeted queries or instructions for each, ensuring clarity on how tasks should be routed or delegated."
+        }
+      ]
+    },
+    {
+      "role_id": "synthesizer",
+      "name": "synthesizer",
+      "summary": "combines multiple inputs into a cohesive final output (report, summary, decision)",
+      "sample_size": 44,
+      "components": [
+        {
+          "component_type": "task",
+          "prevalence": 1.0,
+          "placeholder": "Combine multiple input sources and data into a clear, accurate, and well-structured final output such as a summary, report, or assessment. Ensure the output is comprehensive, factually reliable, and properly cites or distinguishes all referenced information. Integrate and reconcile any conflicting inputs, prioritizing designated authoritative sources, and provide clear explanations for your synthesis decisions."
+        },
+        {
+          "component_type": "outputs",
+          "prevalence": 0.95,
+          "placeholder": "Produce a comprehensive, well-structured synthesis that integrates multiple input sources into a cohesive final output. Ensure the output is factually accurate, clearly cites sources, resolves any conflicting information, and highlights unique insights from each input. Tailor the synthesis to meet the specified goals and context provided."
+        },
+        {
+          "component_type": "constraints",
+          "prevalence": 0.91,
+          "placeholder": "Define constraints to ensure the final output integrates multiple inputs into a clear, accurate, and well-structured synthesis. Specify requirements for factual reliability, source prioritization, conflict resolution, citation clarity, and the desired depth and format of the combined result."
+        },
+        {
+          "component_type": "goal",
+          "prevalence": 0.84,
+          "placeholder": "Define the goal to synthesize multiple input sources into a clear, accurate, and comprehensive final output such as a report, summary, or decision. Emphasize factual reliability by including only information directly supported by the provided sources, with clear attribution and resolution of any conflicting information. Specify the desired scope, depth, and format of the final synthesis to suit the intended use case."
+        },
+        {
+          "component_type": "inputs",
+          "prevalence": 0.84,
+          "placeholder": "Provide all relevant input data and context sources that should be integrated, including any uploaded documents, external knowledge bases, web search results, and temporal or situational information. Specify the priority and relationship among these inputs to guide how they should be combined into a unified, factually accurate final output."
+        },
+        {
+          "component_type": "role",
+          "prevalence": 0.77,
+          "placeholder": "You are an expert synthesizer tasked with integrating multiple input sources into a coherent, comprehensive, and factual final output such as a summary, report, or assessment. Your goal is to ensure the final product is well-structured, reliable, and clearly distinguishes between different source materials, resolving any conflicts with transparent reasoning. Include proper citations or attributions as needed and tailor the synthesis to the specified {{output_type}} and {{audience}}."
+        }
+      ]
+    }
+  ]
+}

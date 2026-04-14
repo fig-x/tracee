@@ -1,0 +1,79 @@
+import { useEffect } from "react";
+import cognitionIcon from "../../../assets/cognition.svg";
+import executionIcon from "../../../assets/execution.svg";
+import cognitionLayerIcon from "../../../assets/icon-cognition-layer-button.svg";
+import { useSidebar } from "../../../context/SidebarContext";
+import { useLayer } from "../../../context/LayerContext";
+import { IntentDetails } from "./IntentDetails";
+import { ExecutionDetails } from "./ExecutionDetails";
+import { CognitionDetails } from "./CognitionDetails";
+
+interface Props {
+  onRequestClose: () => void;
+}
+
+export function AgentDetailPanel({ onRequestClose }: Props) {
+  const { selectedNode } = useSidebar();
+  const { layer, setLayer } = useLayer();
+
+  const isTraceLayer = layer === "execution" || layer === "cognition";
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && selectedNode) onRequestClose();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onRequestClose, selectedNode]);
+
+  if (!selectedNode) return null;
+
+  return (
+    <>
+      <div className="side-panel__backdrop" onClick={onRequestClose} />
+      <div className="side-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="side-panel__header">
+          <div className="side-panel__header-main">
+            <div className="side-panel__icon-wrapper">
+              <img src={cognitionIcon} alt="" className="side-panel__icon" />
+            </div>
+            <div className="side-panel__header-text">
+              <h2 className="side-panel__title">{selectedNode.label}</h2>
+              {!isTraceLayer && (
+                <p className="side-panel__subtitle">agent details</p>
+              )}
+            </div>
+          </div>
+          <button className="side-panel__close" onClick={onRequestClose} aria-label="close panel">
+            &times;
+          </button>
+        </div>
+        {isTraceLayer && (
+          <div className="side-panel__layer-tabs">
+            <button
+              type="button"
+              className={`side-panel__layer-tab ${layer === "execution" ? "is-active" : ""}`}
+              onClick={() => setLayer("execution")}
+            >
+              <img src={executionIcon} alt="" className="side-panel__layer-tab-icon" />
+              Execution
+            </button>
+            <button
+              type="button"
+              className={`side-panel__layer-tab ${layer === "cognition" ? "is-active" : ""}`}
+              onClick={() => setLayer("cognition")}
+            >
+              <img src={cognitionLayerIcon} alt="" className="side-panel__layer-tab-icon" />
+              Cognition
+            </button>
+          </div>
+        )}
+        <div className="side-panel__content">
+          {layer === "intent" && <IntentDetails node={selectedNode} />}
+          {layer === "execution" && <ExecutionDetails node={selectedNode} />}
+          {layer === "cognition" && <CognitionDetails node={selectedNode} />}
+        </div>
+      </div>
+    </>
+  );
+}

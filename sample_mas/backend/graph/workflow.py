@@ -1,0 +1,267 @@
+import os
+import sys
+from pathlib import Path
+
+from langgraph.graph import StateGraph, END
+from backend.state.schema import AnalysisState
+from backend.agents.interaction import create_interaction_agent
+from backend.agents.planner import create_planner_agent
+from backend.agents.coding import create_coding_agent
+from backend.agents.summary import create_summary_agent
+from backend.telemetry.config import TRACEE_SERVER_URL
+from langchain_core.messages import HumanMessage
+import pandas as pd
+
+project_root = Path(__file__).resolve().parents[3]
+workspace_root = project_root.parent
+if str(workspace_root) not in sys.path:
+    sys.path.insert(0, str(workspace_root))
+
+import tracee
+
+
+def should_continue_to_next_node(state: AnalysisState) -> str:
+    if state.get("relevance_decision") == "relevant":
+        return "planner"
+    return "end"
+
+
+def should_retry_coding(state: AnalysisState) -> str:
+    execution_success = state.get("execution_result", {}).get("success", False)
+    if execution_success:
+        return "summary"
+    if state.get("next_agent") == "coding":
+        return "coding"
+    return "summary"
+
+
+def should_continue_after_planner(state: AnalysisState) -> str:
+    if state.get("next_agent") == "end" or not state.get("coding_prompt"):
+        return "end"
+    return "coding"
+
+
+def _serialize_messages(messages: list) -> list[dict]:
+    serialized = []
+    for msg in messages:
+        if isinstance(msg, dict):
+            content = msg.get("content", "")
+            role = msg.get("role", msg.get("type", "unknown"))
+        else:
+            content = msg.content
+            role = msg.type
+        if isinstance(content, list):
+            content = " ".join(
+                item.get("text", str(item)) if isinstance(item, dict) else str(item)
+                for item in content
+            )
+        serialized.append({"role": role, "content": str(content)})
+    return serialized
+
+
+def create_workflow() -> StateGraph:
+    workflow = StateGraph(AnalysisState)
+    
+    workflow.add_node("interaction", create_interaction_agent, metadata={
+        "prompt_id": "interaction-prompt",
+        "model": "gpt-5-mini-2025-08-07",
+        "temperature": 0,
+        "has_tools": True,
+    })
+    workflow.add_node("planner", create_planner_agent, metadata={
+        "prompt_id": "planner-prompt",
+        "model": "o3-mini",
+        "reasoning_effort": "medium",
+        "has_tools": True,
+    })
+    workflow.add_node("coding", create_coding_agent, metadata={
+        "prompt_id": "coding-prompt",
+        "model": "gpt-4o-mini",
+        "temperature": 0,
+        "has_tools": False,
+    })
+    workflow.add_node("summary", create_summary_agent, metadata={
+        "prompt_id": "summary-prompt",
+        "model": "gpt-4o-mini",
+        "temperature": 0.5,
+        "has_tools": False,
+    })
+    
+    # starting point
+    workflow.set_entry_point("interaction")
+    
+    # langgraph allows conditional edges, in our sample project, the first (interaction)
+    # agent can determine whether to proceed with other agents
+    workflow.add_conditional_edges(
+        "interaction",
+        should_continue_to_next_node,
+        {
+            "planner": "planner",
+            "end": END
+        }
+    )
+    
+    # manually defines the rest of the paths
+    workflow.add_conditional_edges(
+        "planner",
+        should_continue_after_planner,
+        {
+            "coding": "coding",
+            "end": END,
+        }
+    )
+    workflow.add_conditional_edges(
+        "coding",
+        should_retry_coding,
+        {
+            "coding": "coding",
+            "summary": "summary",
+        }
+    )
+    workflow.add_edge("summary", END)
+    
+    app = workflow.compile()
+    tracee.init(
+        app,
+        graph_id="data-analysis-mas",
+        name="Data Analysis MAS",
+        description="Multi-agent system for interactive data analysis",
+        server_url=TRACEE_SERVER_URL,
+    )
+    return app
+
+
+def run_analysis_workflow(dataset: pd.DataFrame, query: str, dataset_path: str = "uploaded", session_id: str = "default") -> dict:
+    """Run the complete analysis workflow.
+    
+    Args:
+        dataset: The pandas DataFrame to analyze
+        query: User's query/request
+        dataset_path: Path or name of the dataset
+        session_id: Session identifier for tracking
+        
+    Returns:
+        Dictionary with workflow results
+    """
+    # get dataset info upfront and store it in the state
+    dataset_info = {
+        "columns": list(dataset.columns),
+        "dtypes": {col: str(dtype) for col, dtype in dataset.dtypes.items()},
+        "shape": {"rows": dataset.shape[0], "columns": dataset.shape[1]},
+        "numeric_columns": list(dataset.select_dtypes(include=['number']).columns),
+        "categorical_columns": list(dataset.select_dtypes(include=['object', 'category']).columns),
+    }
+
+    app = create_workflow()
+
+    with tracee.trace():
+        # initialize state
+        initial_state = {
+            "dataset": dataset,
+            "dataset_path": dataset_path,
+            "dataset_info": dataset_info,
+            "messages": [HumanMessage(content=query)],
+            "user_query": query,
+            "relevance_decision": "",
+            "analysis_plan": "",
+            "coding_prompt": "",
+            "generated_code": "",
+            "execution_result": {},
+            "final_summary": "",
+            "rag_context": "",
+            "retry_count": 0,
+            "next_agent": "interaction",
+            "session_id": session_id,
+        }
+
+        try:
+            final_state = app.invoke(initial_state)
+
+            return {
+                "success": True,
+                "final_summary": final_state.get("final_summary", ""),
+                "relevance_decision": final_state.get("relevance_decision", ""),
+                "generated_code": final_state.get("generated_code", ""),
+                "execution_result": final_state.get("execution_result", {}),
+                "analysis_plan": final_state.get("analysis_plan", ""),
+                "rag_context": final_state.get("rag_context", ""),
+                "retry_count": final_state.get("retry_count", 0),
+                "messages": _serialize_messages(final_state.get("messages", [])),
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "final_summary": f"Workflow execution failed: {str(e)}",
+                "relevance_decision": "",
+                "generated_code": "",
+                "execution_result": {},
+                "analysis_plan": "",
+                "rag_context": "",
+                "retry_count": 0,
+                "messages": [],
+            }
+
+
+async def run_analysis_workflow_async(dataset: pd.DataFrame, query: str, dataset_path: str = "uploaded", session_id: str = "default") -> dict:
+    """Run the complete analysis workflow asynchronously."""
+    # get dataset info upfront
+    dataset_info = {
+        "columns": list(dataset.columns),
+        "dtypes": {col: str(dtype) for col, dtype in dataset.dtypes.items()},
+        "shape": {"rows": dataset.shape[0], "columns": dataset.shape[1]},
+        "numeric_columns": list(dataset.select_dtypes(include=['number']).columns),
+        "categorical_columns": list(dataset.select_dtypes(include=['object', 'category']).columns),
+    }
+
+    app = create_workflow()
+
+    with tracee.trace():
+        # initialize state
+        initial_state = {
+            "dataset": dataset,
+            "dataset_path": dataset_path,
+            "dataset_info": dataset_info,
+            "messages": [HumanMessage(content=query)],
+            "user_query": query,
+            "relevance_decision": "",
+            "analysis_plan": "",
+            "coding_prompt": "",
+            "generated_code": "",
+            "execution_result": {},
+            "final_summary": "",
+            "rag_context": "",
+            "retry_count": 0,
+            "next_agent": "interaction",
+            "session_id": session_id,
+        }
+
+        try:
+            final_state = await app.ainvoke(initial_state)
+
+            return {
+                "success": True,
+                "final_summary": final_state.get("final_summary", ""),
+                "relevance_decision": final_state.get("relevance_decision", ""),
+                "generated_code": final_state.get("generated_code", ""),
+                "execution_result": final_state.get("execution_result", {}),
+                "analysis_plan": final_state.get("analysis_plan", ""),
+                "rag_context": final_state.get("rag_context", ""),
+                "retry_count": final_state.get("retry_count", 0),
+                "messages": _serialize_messages(final_state.get("messages", [])),
+            }
+
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "final_summary": f"Workflow execution failed: {str(e)}",
+                "relevance_decision": "",
+                "generated_code": "",
+                "execution_result": {},
+                "analysis_plan": "",
+                "rag_context": "",
+                "retry_count": 0,
+                "messages": [],
+            }
