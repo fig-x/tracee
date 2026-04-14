@@ -4,11 +4,10 @@ An observability and prompt-engineering toolkit for multi-agent systems built on
 
 Existing applications usually provide poor navigation and little visibility into your system structure. Tracee introduces a new way of navigating your LangGraph execution traces by providing a **Graph** page that allows you to visualize the execution of your workflow. It also provides a **Playground** page that allows you to author and experiment with prompts, and a **Prompts** page that allows you to browse and compare your saved prompts.
 
-## Features
-
-- **Graph** — Visualize agent topology, inspect execution traces frame-by-frame, and run cognition analysis on completed runs.
-- **Playground** — Author prompts with structured components, run experiments against live models, and compare outputs side by side.
-- **Prompts** — Browse your saved prompt library, compare versions with a visual diff, and load any version into the playground.
+<p>
+  <img src="docs/img/execution-layer.png" alt="Graph — Execution layer" width="49%">
+  <img src="docs/img/playground-workspace.png" alt="Playground workspace" width="49%">
+</p>
 
 ## Why Tracee
 
@@ -22,23 +21,6 @@ The **Graph Viewer** is designed for the outer loop. It separates what your syst
 - **Execution layer** — the runtime trace of a specific invocation, overlaid on the intent graph so you can see exactly which path was taken.
 - **Cognition layer** — an AI-supported analysis of a completed trace, summarizing decisions at both the node and trace level.
 
-## Core Concepts
-
-| Concept | Description |
-|---------|-------------|
-| **Graph** | A directed topology of agents and terminal states that mirrors the compiled LangGraph workflow. |
-| **Trace** | A recorded execution of a graph — state transitions, LLM calls, tool invocations, and outputs from a single `app.invoke()` run. |
-| **Prompt** | A structured template of components, tool definitions, variables, and an output schema. The primary unit of authoring in the Playground. |
-| **Layer** | The Graph page supports three viewing layers — Intent, Execution, and Cognition — each revealing progressively deeper insight. |
-
-## Workflow
-
-Tracee's three pages are designed to work together as a continuous feedback loop:
-
-1. **Design in Prompts** — Browse existing prompts or create a new one. Define system instructions, user message template, tools, and output schema.
-2. **Experiment in Playground** — Load the prompt, run experiments with different variables or model configs, and compare outputs against your anchor.
-3. **Observe in Graph** — Trace executions, replay state transitions, and run cognition analysis on completed runs.
-4. **Iterate** — Use insights from traces and cognition analysis to refine prompts. Save a new version, re-run, verify.
 
 ## Setup Guide
 
@@ -49,27 +31,22 @@ Tracee's three pages are designed to work together as a continuous feedback loop
 - A LangGraph workflow you want to instrument (`langgraph` installed in your project)
 - An OpenAI API key if you plan to use the Playground or Cognition analysis features
 
-### 1. Install the package
-
-The core SDK is lightweight and only depends on `httpx`, `langchain-core`, and `pydantic`. We recommend using [uv](https://docs.astral.sh/uv/) for fast, reliable dependency management.
+### 1. Clone the repository
 
 ```bash
-uv add tracee
+git clone <REPO_URL>
+cd tracee
 ```
 
-Or with pip:
+### 2. Install the package
 
-```bash
-pip install tracee
-```
-
-To also run the Tracee server and UI locally, install with the server extras:
+We recommend using [uv](https://docs.astral.sh/uv/) for fast, reliable dependency management.
 
 ```bash
 uv add 'tracee[server]'
 ```
 
-### 2. Start the server
+### 3. Start the server
 
 The built-in UI is served automatically — no separate frontend build step required.
 
@@ -85,24 +62,22 @@ tracee serve --port 8000 --host 0.0.0.0
 
 Open `http://localhost:8000` in your browser. The Graph page will be empty until you register a workflow.
 
-### 3. Configure environment
+### 4. Configure environment
 
 The server loads a `.env` file from the working directory on startup.
 
 ```bash
 # .env (in the directory where you run tracee serve)
 OPENAI_API_KEY=sk-...
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
 | Variable | Description |
 |----------|-------------|
 | `OPENAI_API_KEY` | Required for Playground runs and Cognition analysis. |
-| `CORS_ORIGINS` | Comma-separated allowed origins (defaults to `*`). |
 | `TRACE_DB_PATH` | Override the SQLite database location. |
 | `TRACEE_COGNITION_MODEL` | LLM model for cognition analysis (defaults to `gpt-4o-mini`). |
 
-### 4. Instrument your LangGraph app
+### 5. Instrument your LangGraph app
 
 Import `tracee`, register the compiled graph, and wrap invocations with `tracee.trace()`.
 
@@ -127,7 +102,7 @@ with tracee.trace():
 - `tracee.init()` publishes the graph topology and patches `invoke` / `ainvoke` to attach tracing callbacks.
 - `tracee.trace()` records the full execution and streams events to the server.
 
-### 5. Verify the connection
+### 6. Verify the connection
 
 After running your instrumented app at least once:
 

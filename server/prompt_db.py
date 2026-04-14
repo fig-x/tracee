@@ -189,6 +189,18 @@ def delete_prompt(prompt_id: str) -> None:
         conn.commit()
 
 
+def delete_version(prompt_id: str, version_id: str) -> None:
+    with _connect() as conn:
+        conn.execute(
+            """
+            delete from prompt_versions
+            where prompt_id = ? and version_id = ?
+            """,
+            (prompt_id, version_id),
+        )
+        conn.commit()
+
+
 def insert_version(version: PromptVersion) -> None:
     with _connect() as conn:
         conn.execute(

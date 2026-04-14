@@ -28,6 +28,11 @@ interface CompareTarget {
   version: PromptVersion;
 }
 
+interface DeleteTarget {
+  prompt: PromptListItem;
+  version: PromptVersion | null;
+}
+
 function getMaskIconStyle(icon: string): React.CSSProperties {
   return {
     WebkitMaskImage: `url("${icon}")`,
@@ -48,8 +53,9 @@ export function PromptsPage() {
   const [sortKey, setSortKey] = useState<SortKey>('updated_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
 
-  const [deleteTarget, setDeleteTarget] = useState<PromptListItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [compareTarget, setCompareTarget] = useState<CompareTarget | null>(null);
@@ -92,16 +98,45 @@ export function PromptsPage() {
     setDetailView('overview');
   };
 
-  const handleDelete = async () => {
+  const handleDeletePromptHistory = async () => {
     if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteError(null);
     setDeleting(true);
-    await promptAPI.deletePrompt(deleteTarget.prompt_id).catch(() => null);
+    const deleted = await promptAPI.deletePrompt(target.prompt.prompt_id).then(() => true).catch(() => {
+      setDeleteError('Failed to delete prompt history.');
+      return false;
+    });
     setDeleting(false);
+    if (!deleted) return;
     setDeleteTarget(null);
-    if (selectedId === deleteTarget.prompt_id) {
+    if (selectedId === target.prompt.prompt_id) {
       handleDeselect();
     }
     loadPrompts();
+  };
+
+  const handleDeleteVersion = async () => {
+    if (!deleteTarget?.version || deleteTarget.prompt.version_count <= 1) return;
+    const target = deleteTarget;
+    if (!target.version) return;
+    const version = target.version;
+    setDeleteError(null);
+    setDeleting(true);
+    const deleted = await promptAPI
+      .deleteVersion(target.prompt.prompt_id, version.version_id)
+      .then(() => true)
+      .catch(() => {
+        setDeleteError('Failed to delete this version.');
+        return false;
+      });
+    setDeleting(false);
+    if (!deleted) return;
+    setDeleteTarget(null);
+    await loadPrompts();
+    if (selectedId === target.prompt.prompt_id) {
+      await loadDetail(target.prompt.prompt_id);
+    }
   };
 
   const handleMetadataUpdated = () => {
@@ -140,6 +175,15 @@ export function PromptsPage() {
     if (!detail || !effectiveVersionId) return null;
     return detail.versions.find(v => v.version_id === effectiveVersionId) ?? null;
   }, [detail, effectiveVersionId]);
+
+  const openDeleteDialog = useCallback((prompt: PromptListItem) => {
+    const selectedVersion = detail?.prompt.prompt_id === prompt.prompt_id ? effectiveVersion : null;
+    setDeleteError(null);
+    setDeleteTarget({
+      prompt,
+      version: selectedVersion,
+    });
+  }, [detail, effectiveVersion]);
 
   // resolved text for the active version (used by both resolved view and diff)
   const currentResolvedPrompt = useMemo(() => {
@@ -325,7 +369,7 @@ export function PromptsPage() {
                         className="prompts-list__delete-btn"
                         title="delete prompt"
                         aria-label={`delete ${prompt.name}`}
-                        onClick={e => { e.stopPropagation(); setDeleteTarget(prompt); }}
+                        onClick={e => { e.stopPropagation(); openDeleteDialog(prompt); }}
                       >
                         ×
                       </button>
@@ -456,7 +500,7 @@ export function PromptsPage() {
                             className="btn btn--secondary btn--sm prompts-page__action-btn prompts-page__action-btn--danger"
                             onClick={() => {
                               const item = prompts.find(p => p.prompt_id === detail.prompt.prompt_id);
-                              if (item) setDeleteTarget(item);
+                              if (item) openDeleteDialog(item);
                             }}
                           >
                             <span
@@ -521,28 +565,61 @@ export function PromptsPage() {
       {deleteTarget && (
         <div className="prompts-dialog__backdrop" onClick={() => !deleting && setDeleteTarget(null)}>
           <div className="prompts-dialog" onClick={e => e.stopPropagation()}>
-            <div className="prompts-dialog__title">Delete prompt</div>
+            <div className="prompts-dialog__title">Delete prompt content</div>
             <div className="prompts-dialog__body">
-              Are you sure you want to delete <strong>{deleteTarget.name}</strong> and
-              all {deleteTarget.version_count} version{deleteTarget.version_count !== 1 ? 's' : ''}?
-              This cannot be undone.
+              {deleteTarget.version ? (
+                <>
+                  Choose whether to delete{' '}
+                  <strong>{deleteTarget.version.name?.trim() || deleteTarget.version.version_id}</strong>{' '}
+                  from <strong>{deleteTarget.prompt.name}</strong> or remove the entire prompt history.
+                  {deleteTarget.prompt.version_count <= 1 && (
+                    <>
+                      {' '}The only saved version cannot be removed by itself.
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  Delete <strong>{deleteTarget.prompt.name}</strong> and all{' '}
+                  {deleteTarget.prompt.version_count} version
+                  {deleteTarget.prompt.version_count !== 1 ? 's' : ''}? This cannot be undone.
+                </>
+              )}
             </div>
-            <div className="prompts-dialog__actions">
+            {deleteError && (
+              <div className="field__hint" style={{ color: '#dc2626' }}>
+                {deleteError}
+              </div>
+            )}
+            <div className="prompts-dialog__actions" style={{ flexWrap: 'wrap' }}>
               <button
                 type="button"
                 className="btn btn--secondary btn--sm"
-                onClick={() => setDeleteTarget(null)}
+                onClick={() => {
+                  setDeleteError(null);
+                  setDeleteTarget(null);
+                }}
                 disabled={deleting}
               >
                 Cancel
               </button>
+              {deleteTarget.version && (
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--sm"
+                  onClick={handleDeleteVersion}
+                  disabled={deleting || deleteTarget.prompt.version_count <= 1}
+                >
+                  {deleting ? 'Deleting...' : 'Delete this version'}
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn--danger btn--sm"
-                onClick={handleDelete}
+                onClick={handleDeletePromptHistory}
                 disabled={deleting}
               >
-                {deleting ? 'Deleting...' : 'Delete'}
+                {deleting ? 'Deleting...' : 'Delete prompt history'}
               </button>
             </div>
           </div>

@@ -24,6 +24,13 @@ import pgRunDetailImg from "./img/playground-run-detail.png";
 import pgRunDiffImg from "./img/playground-run-diff.png";
 import pgAnchorImg from "./img/playground-anchor.png";
 import pgVersionTreeImg from "./img/playground-version-tree.png";
+import pgGuidedStartImg from "./img/playground-guidedstart.png";
+import pgGuidedStartOverlayImg from "./img/playground-guidedstart-overlay.png";
+import pgComparisonImg from "./img/playground-comparison.png";
+import pgComparisonDiffImg from "./img/playground-comparison-diff.png";
+import promptsLeftRailImg from "./img/prompts-left-rail.png";
+import promptsVersionHistoryImg from "./img/prompts-version-history.png";
+import promptsDiffViewImg from "./img/prompts-diff-view.png";
 import loopDiagramImg from "./img/loop-diagram.png";
 
 /* ── types ─────────────────────────────────────────── */
@@ -47,6 +54,7 @@ const pages: PageDef[] = [
     label: "Setup Guide",
     toc: [
       { id: "prerequisites", label: "Prerequisites" },
+      { id: "clone", label: "Clone the repository" },
       { id: "install", label: "Install the package" },
       { id: "start-server", label: "Start the server" },
       { id: "configure-env", label: "Configure environment" },
@@ -71,8 +79,8 @@ const pages: PageDef[] = [
     id: "playground",
     label: "Playground",
     toc: [
-      { id: "pg-creating", label: "Creating a prompt" },
       { id: "pg-workspace", label: "Workspace layout" },
+      { id: "pg-creating", label: "Creating a prompt" },
       { id: "pg-components", label: "Prompt components" },
       { id: "pg-component-card", label: "Component card", depth: 1 },
       { id: "pg-resolved", label: "Resolved view", depth: 1 },
@@ -81,13 +89,15 @@ const pages: PageDef[] = [
       { id: "pg-variables", label: "Variables", depth: 1 },
       { id: "pg-tools", label: "Tools", depth: 1 },
       { id: "pg-schema", label: "Output schema", depth: 1 },
-      { id: "pg-guided", label: "Guided start" },
       { id: "pg-running", label: "Running experiments" },
+      { id: "pg-single-run", label: "Single prompt run", depth: 1 },
+      { id: "pg-comparison-run", label: "Comparing two versions", depth: 1 },
       { id: "pg-results", label: "Analyzing results" },
       { id: "pg-scatter", label: "Scatter plot", depth: 1 },
       { id: "pg-run-detail", label: "Run detail", depth: 1 },
       { id: "pg-anchor", label: "Anchor workflow", depth: 1 },
       { id: "pg-saving", label: "Saving and versioning" },
+      { id: "pg-guided", label: "Guided start" },
     ],
   },
   {
@@ -114,14 +124,12 @@ const pages: PageDef[] = [
 ];
 
 /* ── code snippets ─────────────────────────────────── */
-const installSnippet = `uv add tracee`;
-const installPipSnippet = `pip install tracee`;
-const installServerSnippet = `uv add 'tracee[server]'`;
+const cloneSnippet = `git clone https://github.com/fig-x/tracee.git\ncd tracee`;
+const installSnippet = `uv add 'tracee[server]'`;
 const startServerSnippet = `tracee serve`;
 const startServerOptionsSnippet = `tracee serve --port 8000 --host 0.0.0.0`;
 const envSnippet = `# .env (in the directory where you run tracee serve)
-OPENAI_API_KEY=sk-...
-CORS_ORIGINS=http://localhost:5173,http://localhost:3000`;
+OPENAI_API_KEY=sk-...`;
 
 const integrationSnippet = `import tracee
 
@@ -159,21 +167,48 @@ const metadataSnippet = `workflow.add_node("planner", create_planner_agent, meta
 })`;
 
 /* ── shared components ─────────────────────────────── */
-function ScreenshotPlaceholder({ title, guidance, src, maxWidth }: { title: string; guidance: string; src?: string; maxWidth?: number }) {
+function Lightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
   return (
-    <figure className="docs__screenshot" style={maxWidth ? { maxWidth } : undefined}>
-      {src ? (
-        <div className="docs__screenshot-frame docs__screenshot-frame--image">
-          <img src={src} alt={title} className="docs__screenshot-img" loading="lazy" />
-        </div>
-      ) : (
-        <div className="docs__screenshot-frame">
-          <span className="docs__screenshot-icon">&#128247;</span>
-          <p className="docs__screenshot-title">{title}</p>
-        </div>
-      )}
-      <figcaption className="docs__screenshot-caption">{guidance}</figcaption>
-    </figure>
+    <div className="docs__lightbox" onClick={onClose}>
+      <button type="button" className="docs__lightbox-close" onClick={onClose} aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+      </button>
+      <img src={src} alt={alt} className="docs__lightbox-img" onClick={(e) => e.stopPropagation()} />
+    </div>
+  );
+}
+
+function ScreenshotPlaceholder({ title, guidance, src, maxWidth }: { title: string; guidance: string; src?: string; maxWidth?: number }) {
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  return (
+    <>
+      <figure className="docs__screenshot" style={maxWidth ? { maxWidth } : undefined}>
+        {src ? (
+          <div
+            className="docs__screenshot-frame docs__screenshot-frame--image docs__screenshot-frame--clickable"
+            onClick={() => setLightboxOpen(true)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setLightboxOpen(true); }}
+          >
+            <img src={src} alt={title} className="docs__screenshot-img" loading="lazy" />
+          </div>
+        ) : (
+          <div className="docs__screenshot-frame">
+            <span className="docs__screenshot-icon">&#128247;</span>
+            <p className="docs__screenshot-title">{title}</p>
+          </div>
+        )}
+        <figcaption className="docs__screenshot-caption">{guidance}</figcaption>
+      </figure>
+      {lightboxOpen && src && <Lightbox src={src} alt={title} onClose={() => setLightboxOpen(false)} />}
+    </>
   );
 }
 
@@ -438,37 +473,34 @@ function SetupPage() {
         <li>An OpenAI API key if you plan to use the Playground or Cognition analysis features</li>
       </ul>
 
-      <h3 id="install" className="docs__subsection-title">1. Install the package</h3>
+      <h3 id="clone" className="docs__subsection-title">1. Clone the repository</h3>
+      <CodeBlock code={cloneSnippet} />
+
+      <h3 id="install" className="docs__subsection-title">2. Install the package</h3>
       <p className="docs__prose">
-        The core SDK is lightweight and only depends on <code>httpx</code>, <code>langchain-core</code>, and <code>pydantic</code>.
         We recommend using <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener noreferrer">uv</a> for fast, reliable dependency management.
       </p>
-      <CodeBlock code={installSnippet} label="core SDK (uv)" />
-      <p className="docs__prose">Or with pip:</p>
-      <CodeBlock code={installPipSnippet} label="core SDK (pip)" />
-      <p className="docs__prose">To also run the Tracee server and UI locally, install with the server extras:</p>
-      <CodeBlock code={installServerSnippet} label="with server + UI" />
+      <CodeBlock code={installSnippet} />
 
-      <h3 id="start-server" className="docs__subsection-title">2. Start the server</h3>
+      <h3 id="start-server" className="docs__subsection-title">3. Start the server</h3>
       <p className="docs__prose">The built-in UI is served automatically — no separate frontend build step required.</p>
       <CodeBlock code={startServerSnippet} label="start the server" />
       <p className="docs__prose">Override the port and host:</p>
       <CodeBlock code={startServerOptionsSnippet} label="custom host and port" />
       <p className="docs__prose">Open <code>http://localhost:8000</code> in your browser. The Graph page will be empty until you register a workflow.</p>
 
-      <h3 id="configure-env" className="docs__subsection-title">3. Configure environment</h3>
+      <h3 id="configure-env" className="docs__subsection-title">4. Configure environment</h3>
       <p className="docs__prose">The server loads a <code>.env</code> file from the working directory on startup.</p>
       <CodeBlock code={envSnippet} label=".env file" />
       <Callout type="info" title="Environment variables reference">
         <p>
           <code>OPENAI_API_KEY</code> — required for Playground runs and Cognition analysis.<br />
-          <code>CORS_ORIGINS</code> — comma-separated allowed origins (defaults to <code>*</code>).<br />
           <code>TRACE_DB_PATH</code> — override the SQLite database location.<br />
           <code>TRACEE_COGNITION_MODEL</code> — LLM model for cognition analysis (defaults to <code>gpt-4o-mini</code>).
         </p>
       </Callout>
 
-      <h3 id="instrument-app" className="docs__subsection-title">4. Instrument your LangGraph app</h3>
+      <h3 id="instrument-app" className="docs__subsection-title">5. Instrument your LangGraph app</h3>
       <p className="docs__prose">Import <code>tracee</code>, register the compiled graph, and wrap invocations with <code>tracee.trace()</code>.</p>
       <CodeBlock code={integrationSnippet} label="full integration example" />
       <Callout type="tip" title="What each call does">
@@ -478,7 +510,7 @@ function SetupPage() {
         </p>
       </Callout>
 
-      <h3 id="verify" className="docs__subsection-title">5. Verify the connection</h3>
+      <h3 id="verify" className="docs__subsection-title">6. Verify the connection</h3>
       <p className="docs__prose">After running your instrumented app at least once:</p>
       <ol className="docs__steps">
         <li className="docs__step">
@@ -599,6 +631,27 @@ function PlaygroundPage() {
         and <strong>Analysis</strong> for reviewing run outputs.
       </p>
 
+
+      {/* ── Workspace layout ─────────────── */}
+      <h3 id="pg-workspace" className="docs__subsection-title">Workspace layout</h3>
+      <p className="docs__prose">
+        The Playground uses a three-column layout. 
+        
+        The left rail lets you start a new prompt or load an existing
+        one (with its full version history). 
+        
+        The center workspace is where you edit prompt components or view
+        results. 
+        
+        The right rail shows a Prompt overview — a structural outline of your prompt
+        with clickable rows that jump to each component, plus counts for tools, output schema fields, and variables.
+      </p>
+      <ScreenshotPlaceholder
+        title="Playground — full workspace"
+        guidance="Three-column layout: left rail with prompt selector, center editor with components, right outline panel."
+        src={pgWorkspaceImg}
+      />
+
       {/* ── Creating a prompt ────────────── */}
       <h3 id="pg-creating" className="docs__subsection-title">Creating a prompt</h3>
       <p className="docs__prose">
@@ -626,30 +679,10 @@ function PlaygroundPage() {
         </p>
       </Callout>
 
-      {/* ── Workspace layout ─────────────── */}
-      <h3 id="pg-workspace" className="docs__subsection-title">Workspace layout</h3>
-      <p className="docs__prose">
-        The Playground uses a three-column layout. The left rail lets you start a new prompt or load an existing
-        one (with its full version history). The center workspace is where you edit prompt components or view
-        results. The right rail shows a <strong>Prompt overview</strong> — a structural outline of your prompt
-        with clickable rows that jump to each component, plus counts for tools, output schema fields, and variables.
-      </p>
-      <ScreenshotPlaceholder
-        title="Playground — full workspace"
-        guidance="Three-column layout: left rail with prompt selector, center editor with components, right outline panel."
-        src={pgWorkspaceImg}
-      />
-      <ScreenshotPlaceholder
-        title="Prompt overview panel (right rail)"
-        guidance="Right rail: structure with component rows, tools/schema/variables counts."
-        src={pgOverviewPanelImg}
-        maxWidth={320}
-      />
-
       {/* ── Prompt components ────────────── */}
       <h3 id="pg-components" className="docs__subsection-title">Prompt components</h3>
       <p className="docs__prose">
-        Prompts are composed of ordered components. Each component has a <strong>role</strong> (System, Human,
+        To reducing cognitive load and account for when prompts grow longer, in Tracee, prompts are composed of <strong>components</strong>. Each component has a <strong>role</strong> (System, Human,
         or AI) and free-form text content. You can add standard component types from a dropdown, or create
         custom sections. Components can be reordered via drag-and-drop and toggled on/off individually —
         disabled components are excluded when the prompt is resolved.
@@ -729,29 +762,14 @@ function PlaygroundPage() {
         banner appears on the main workspace.
       </p>
 
-      {/* ── Guided start ─────────────────── */}
-      <h3 id="pg-guided" className="docs__subsection-title">Guided start</h3>
-      <p className="docs__prose">
-        When you open an empty Playground, a <strong>Guided start</strong> panel appears. It presents a grid
-        of agent role templates — each based on patterns from your registered agents. Selecting a role
-        pre-fills the prompt with appropriate components and roles.
-      </p>
-      <ScreenshotPlaceholder
-        title="Guided start — role grid"
-        guidance="Open the Guided start panel from an empty prompt. Capture the grid of role cards showing titles, summaries, and 'Based on N agents' labels."
-      />
-      <p className="docs__prose">
-        After selecting a role, a multi-step overlay guides you through editing the generated components,
-        setting variables, and choosing between tools or an output schema. The overlay highlights the
-        relevant toolbar button at each step.
-      </p>
-      <ScreenshotPlaceholder
-        title="Guided overlay — component step"
-        guidance="Capture the guided overlay at step 2: the floating panel showing the list of pre-filled components with type badges and prevalence percentages, positioned under the editor."
-      />
-
       {/* ── Running experiments ───────────── */}
       <h3 id="pg-running" className="docs__subsection-title">Running experiments</h3>
+      <p className="docs__prose">
+        The Playground supports two modes of running experiments — testing a single prompt version in
+        isolation, or comparing two prompt versions side by side.
+      </p>
+
+      <h4 id="pg-single-run" className="docs__h4-title">Single prompt run</h4>
       <p className="docs__prose">
         Click <strong>Start</strong> to send the resolved prompt to the selected model. The button includes a
         dropdown chevron that opens a <strong>repetitions popover</strong> — set the number of runs (1–10)
@@ -769,6 +787,25 @@ function PlaygroundPage() {
         When all runs complete, the Playground automatically switches to the <strong>Outputs</strong> tab in
         Analysis mode.
       </p>
+
+      <h4 id="pg-comparison-run" className="docs__h4-title">Comparing two versions</h4>
+      <p className="docs__prose">
+        To compare two prompt versions, load a prompt and select a second version from the version
+        history in the left rail. The Playground enters comparison mode, running both versions with the
+        same variables, model config, and repetition count. Results are grouped by version so you can
+        see how changes to the prompt affect outputs.
+      </p>
+      <ScreenshotPlaceholder
+        title="Comparison mode — version selection"
+        guidance="Left rail with two versions selected for comparison, showing the comparison indicator."
+        src={pgComparisonImg}
+        maxWidth={340}
+      />
+      <ScreenshotPlaceholder
+        title="Comparison mode — diff view"
+        guidance="Diff view showing the resolved prompt differences between the two selected versions, with color-coded additions and removals."
+        src={pgComparisonDiffImg}
+      />
 
       {/* ── Analyzing results ────────────── */}
       <h3 id="pg-results" className="docs__subsection-title">Analyzing results</h3>
@@ -861,6 +898,30 @@ function PlaygroundPage() {
         src={pgVersionTreeImg}
         maxWidth={280}
       />
+
+      {/* ── Guided start ─────────────────── */}
+      <h3 id="pg-guided" className="docs__subsection-title">Guided start</h3>
+      <p className="docs__prose">
+        When you open an empty Playground, a <strong>Guided start</strong> panel appears. It presents a grid
+        of agent role templates from our analysis of our hand-curated prompts from open-source GitHub repos. Selecting a role
+        pre-fills the prompt with appropriate components that are common in the selected role.
+      </p>
+      <ScreenshotPlaceholder
+        title="Guided start — role grid"
+        guidance="Open the Guided start panel from an empty prompt. Capture the grid of role cards showing titles, summaries, and 'Based on N agents' labels."
+        src={pgGuidedStartImg}
+      />
+      <p className="docs__prose">
+        After selecting a role, a multi-step overlay guides you through editing the generated components,
+        setting variables, and choosing between tools or an output schema. The overlay highlights the
+        relevant toolbar button at each step.
+      </p>
+      <ScreenshotPlaceholder
+        title="Guided overlay — component step"
+        guidance="Capture the guided overlay at step 2: the floating panel showing the list of pre-filled components with type badges and prevalence percentages, positioned under the editor."
+        src={pgGuidedStartOverlayImg}
+        maxWidth={480}
+      />
     </>
   );
 }
@@ -876,11 +937,11 @@ function PromptsPage() {
 
       <h3 id="prompt-list" className="docs__subsection-title">Prompt list and search</h3>
       <p className="docs__prose">Search and sort by name, version count, or last updated. Select a prompt to open its version tree.</p>
-      <ScreenshotPlaceholder title="Prompts — Library list" guidance="Left prompt list with several entries, search bar, and one prompt selected." />
+      <ScreenshotPlaceholder title="Prompts — Library list" guidance="Left prompt list with several entries, search bar, and one prompt selected." src={promptsLeftRailImg} maxWidth={380} />
 
       <h3 id="version-tree" className="docs__subsection-title">Version tree</h3>
       <p className="docs__prose">Browse version history. Select a version to inspect, or toggle a second for comparison mode.</p>
-      <ScreenshotPlaceholder title="Version tree with comparison toggle" guidance="A prompt with 3+ versions, one active, one selected as compare target." />
+      <ScreenshotPlaceholder title="Version tree with comparison toggle" guidance="A prompt with 3+ versions, one active, one selected as compare target." src={promptsVersionHistoryImg} maxWidth={380} />
 
       <h3 id="components-resolved-diff" className="docs__subsection-title">Components vs Resolved vs Diff</h3>
       <p className="docs__prose">The detail workspace has a segmented control:</p>
@@ -889,7 +950,7 @@ function PromptsPage() {
         <li><strong>Resolved</strong> — the fully interpolated prompt as it would be sent to the model.</li>
         <li><strong>Diff</strong> — side-by-side diff between two versions (visible when a comparison target is selected).</li>
       </ul>
-      <ScreenshotPlaceholder title="Diff view between two versions" guidance="Two versions selected, Diff tab active, side-by-side diff output." />
+      <ScreenshotPlaceholder title="Diff view between two versions" guidance="Two versions selected, Diff tab active, side-by-side diff output." src={promptsDiffViewImg} />
 
       <h3 id="load-into-playground" className="docs__subsection-title">Loading into Playground</h3>
       <p className="docs__prose">

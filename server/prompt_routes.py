@@ -13,6 +13,7 @@ from backbone.utils.identifiers import utc_timestamp
 from server.prompt_db import (
     create_prompt as db_create_prompt,
     delete_prompt as db_delete_prompt,
+    delete_version as db_delete_version,
     get_latest_version as db_get_latest_version,
     get_prompt as db_get_prompt,
     list_prompt_version_counts as db_list_prompt_version_counts,
@@ -179,6 +180,36 @@ def delete_prompt(prompt_id: str) -> dict:
     db_delete_prompt(prompt_id)
     
     return {"deleted": prompt_id}
+
+
+@router.delete("/prompts/{prompt_id}/versions/{version_id}")
+def delete_version(prompt_id: str, version_id: str) -> dict:
+    """Delete a single prompt version."""
+    prompt = db_get_prompt(prompt_id)
+    if not prompt:
+        raise HTTPException(status_code=404, detail=f"Prompt not found: {prompt_id}")
+
+    version = db_get_version(prompt_id, version_id)
+    if not version:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Version not found: {prompt_id}/{version_id}",
+        )
+
+    versions = db_list_versions(prompt_id)
+    if len(versions) <= 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete the only version. Delete the prompt history instead.",
+        )
+
+    db_delete_version(prompt_id, version_id)
+    remaining_versions = db_list_versions(prompt_id)
+    prompt.latest_version_id = remaining_versions[0].version_id if remaining_versions else None
+    prompt.updated_at = utc_timestamp()
+    db_update_prompt(prompt)
+
+    return {"deleted": version_id, "prompt_id": prompt_id}
 
 
 @router.post("/prompts/{prompt_id}/versions")
