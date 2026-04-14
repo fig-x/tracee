@@ -53,12 +53,6 @@ uv add 'tracee[server]'
 uv run tracee serve
 ```
 
-Override the port and host:
-
-```bash
-tracee serve --port 8000 --host 0.0.0.0
-```
-
 Open `http://localhost:8000` in your browser. The Graph page will be empty until you register a workflow.
 
 ### 4. Configure environment

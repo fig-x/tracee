@@ -127,7 +127,6 @@ const pages: PageDef[] = [
 const cloneSnippet = `git clone https://github.com/fig-x/tracee.git\ncd tracee`;
 const installSnippet = `uv add 'tracee[server]'`;
 const startServerSnippet = `uv run tracee serve`;
-const startServerOptionsSnippet = `tracee serve --port 8000 --host 0.0.0.0`;
 const envSnippet = `# .env (in the directory where you run tracee serve)
 OPENAI_API_KEY=sk-...`;
 
@@ -486,7 +485,6 @@ function SetupPage() {
       <p className="docs__prose">The built-in UI is served automatically — no separate frontend build step required.</p>
       <CodeBlock code={startServerSnippet} label="start the server" />
       <p className="docs__prose">Override the port and host:</p>
-      <CodeBlock code={startServerOptionsSnippet} label="custom host and port" />
       <p className="docs__prose">Open <code>http://localhost:8000</code> in your browser. The Graph page will be empty until you register a workflow.</p>
 
       <h3 id="configure-env" className="docs__subsection-title">4. Configure environment</h3>
@@ -547,6 +545,12 @@ function GraphPage() {
         The Graph page renders your workflow as an interactive node-and-edge diagram. It is organized
         around three layers — Intent, Execution, and Cognition — that progressively reveal deeper insight.
       </p>
+
+      <ul className="docs__list">
+        <li><strong>Intent</strong> — static topology view. Shows every agent, edge, and metadata without requiring a traced run.</li>
+        <li><strong>Execution</strong> — runtime replay. Select a trace to see status, latency, token usage, operations timeline and exact I/O for each node.</li>
+        <li><strong>Cognition</strong> — LLM-powered analysis. Generates a semantic summary of the full trace and per-node insights after a run completes.</li>
+      </ul>
 
       <h3 id="graph-registration" className="docs__subsection-title">Registering a graph</h3>
       <p className="docs__prose">Register your compiled LangGraph workflow with the Tracee server to publish its topology.</p>

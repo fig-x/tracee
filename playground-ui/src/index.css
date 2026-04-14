@@ -640,6 +640,35 @@ html, body, #root {
   gap: 12px;
 }
 
+.side-panel__section-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.side-panel__playground-btn {
+  text-decoration: none;
+  padding: 7px 10px;
+}
+
+.side-panel__playground-btn:hover {
+  text-decoration: none;
+}
+
+.side-panel__playground-btn-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-block;
+  background: currentColor;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
+}
+
 .side-panel__section-title {
   margin: 0;
   font-size: 12px;

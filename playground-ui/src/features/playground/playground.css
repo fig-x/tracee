@@ -73,6 +73,8 @@
 :root {
   --playground-primary-fill: #2563eb;
   --playground-compare-fill: #eab308;
+  --rail-width: 300px;
+  --rail-width-narrow: 280px;
 }
 
 .scatter__surface {
@@ -228,11 +230,11 @@
 }
 
 .playground-shell--author {
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr) minmax(260px, 320px);
+  grid-template-columns: var(--rail-width) minmax(0, 1fr) minmax(260px, 320px);
 }
 
 .playground-shell--analysis {
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  grid-template-columns: var(--rail-width) minmax(0, 1fr);
 }
 
 .playground-shell__rail,
@@ -1861,7 +1863,7 @@
 
 @media (max-width: 1320px) and (min-width: 1081px) {
   .playground-shell--author {
-    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+    grid-template-columns: var(--rail-width-narrow) minmax(0, 1fr);
   }
 
   .playground-shell__right {
@@ -2026,14 +2028,14 @@
 
 .prompts-page__layout {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: var(--rail-width) minmax(0, 1fr);
   gap: 16px;
   min-height: calc(100vh - 200px);
   align-items: start;
 }
 
 .prompts-page__layout--with-detail {
-  grid-template-columns: 280px minmax(240px, 320px) minmax(0, 1fr);
+  grid-template-columns: var(--rail-width) minmax(240px, 320px) minmax(0, 1fr);
 }
 
 .prompts-page__list-panel {
@@ -2610,7 +2612,7 @@
 
 @media (max-width: 1200px) {
   .prompts-page__layout--with-detail {
-    grid-template-columns: 260px minmax(220px, 280px) minmax(0, 1fr);
+    grid-template-columns: var(--rail-width-narrow) minmax(220px, 280px) minmax(0, 1fr);
   }
 }
 

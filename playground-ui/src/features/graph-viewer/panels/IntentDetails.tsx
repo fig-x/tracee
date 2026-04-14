@@ -1,8 +1,17 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import type { GraphNodeData } from "../../../types/node-data";
 import { componentColors } from "../constants";
 import { SchemaTable } from "./SchemaTable";
 import { getPromptComponentDisplayName } from "../../playground/promptEditor";
+import iconPlayground from "../../../assets/icon-playground.svg";
+
+function getMaskIconStyle(icon: string) {
+  return {
+    WebkitMaskImage: `url("${icon}")`,
+    maskImage: `url("${icon}")`,
+  };
+}
 
 interface Props {
   node: GraphNodeData;
@@ -32,6 +41,10 @@ export function IntentDetails({ node }: Props) {
     return JSON.stringify(node.outputSchema, null, 2);
   }, [node.outputSchema]);
 
+  const playgroundUrl = node.promptId
+    ? `/playground?promptId=${encodeURIComponent(node.promptId)}${node.promptVersionId ? `&versionId=${encodeURIComponent(node.promptVersionId)}` : ""}`
+    : null;
+
   return (
     <>
       <section className="side-panel__section">
@@ -39,7 +52,7 @@ export function IntentDetails({ node }: Props) {
         <div className="side-panel__meta-grid">
           <div className="side-panel__meta-card">
             <span className="side-panel__meta-key">prompt id</span>
-            <span className="side-panel__meta-value prompt-link" title={node.promptId}>
+            <span className="side-panel__meta-value" title={node.promptId}>
               {node.promptId ?? "n/a"}
             </span>
           </div>
@@ -73,21 +86,33 @@ export function IntentDetails({ node }: Props) {
       <section className="side-panel__section">
         <div className="side-panel__section-head">
           <h3 className="side-panel__section-title">prompt components</h3>
-          <div className="side-panel__mode-toggle">
-            <button
-              type="button"
-              className={`side-panel__mode-btn ${mode === "components" ? "is-active" : ""}`}
-              onClick={() => setMode("components")}
-            >
-              components
-            </button>
-            <button
-              type="button"
-              className={`side-panel__mode-btn ${mode === "raw" ? "is-active" : ""}`}
-              onClick={() => setMode("raw")}
-            >
-              raw prompt
-            </button>
+          <div className="side-panel__section-head-actions">
+            {playgroundUrl && (
+              <Link to={playgroundUrl} className="btn btn--secondary btn--sm side-panel__playground-btn">
+                <span
+                  className="side-panel__playground-btn-icon"
+                  style={getMaskIconStyle(iconPlayground)}
+                  aria-hidden
+                />
+                Open in Playground
+              </Link>
+            )}
+            <div className="side-panel__mode-toggle">
+              <button
+                type="button"
+                className={`side-panel__mode-btn ${mode === "components" ? "is-active" : ""}`}
+                onClick={() => setMode("components")}
+              >
+                components
+              </button>
+              <button
+                type="button"
+                className={`side-panel__mode-btn ${mode === "raw" ? "is-active" : ""}`}
+                onClick={() => setMode("raw")}
+              >
+                raw prompt
+              </button>
+            </div>
           </div>
         </div>
 
