@@ -44,11 +44,11 @@ We recommend using [uv](https://docs.astral.sh/uv/) for fast, reliable dependenc
 
 ```bash
 uv add 'tracee[server]'
+source .venv/bin/activate
 ```
 
 ### 3. Start the server
 
-The built-in UI is served automatically — no separate frontend build step required.
 
 ```bash
 tracee serve
@@ -70,12 +70,6 @@ The server loads a `.env` file from the working directory on startup.
 # .env (in the directory where you run tracee serve)
 OPENAI_API_KEY=sk-...
 ```
-
-| Variable | Description |
-|----------|-------------|
-| `OPENAI_API_KEY` | Required for Playground runs and Cognition analysis. |
-| `TRACE_DB_PATH` | Override the SQLite database location. |
-| `TRACEE_COGNITION_MODEL` | LLM model for cognition analysis (defaults to `gpt-4o-mini`). |
 
 ### 5. Instrument your LangGraph app
 
@@ -102,13 +96,6 @@ with tracee.trace():
 - `tracee.init()` publishes the graph topology and patches `invoke` / `ainvoke` to attach tracing callbacks.
 - `tracee.trace()` records the full execution and streams events to the server.
 
-### 6. Verify the connection
-
-After running your instrumented app at least once:
-
-1. **Check the Graph page** — Your workflow topology should appear with agent nodes and edges.
-2. **Switch to Execution layer** — Select your trace from the dropdown and replay the execution step by step.
-3. **Try the Playground** — Create a simple prompt to confirm the server can reach the LLM API.
 
 ## License
 
