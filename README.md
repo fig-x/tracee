@@ -28,6 +28,7 @@ The **Graph Viewer** is designed for the outer loop. It separates what your syst
 
 - Python 3.11 or later
 - [uv](https://docs.astral.sh/uv/) (recommended) or pip as your package manager
+- Node.js v18 or later and npm (for building the frontend)
 - A LangGraph workflow you want to instrument (`langgraph` installed in your project)
 - An OpenAI API key if you plan to use the Playground or Cognition analysis features
 
@@ -38,22 +39,25 @@ git clone https://github.com/fig-x/tracee.git
 cd tracee
 ```
 
-### 2. Install the package
+### 2. Install dependencies
 
 We recommend using [uv](https://docs.astral.sh/uv/) for fast, reliable dependency management.
 
 ```bash
-uv add 'tracee[server]'
+uv sync --extra server
 ```
 
 ### 3. Start the server
-
 
 ```bash
 uv run tracee serve
 ```
 
+On the first run, this automatically builds the frontend (`npm install` + `npm run build` inside `playground-ui/`). Subsequent runs skip the build since `playground-ui/dist/` already exists.
+
 Open `http://localhost:8000` in your browser. The Graph page will be empty until you register a workflow.
+
+> **Tip:** To force a frontend rebuild (e.g. after pulling new changes), delete `playground-ui/dist/` and re-run `tracee serve`. You can also pass `--skip-build` to skip the automatic build entirely.
 
 ### 4. Configure environment
 

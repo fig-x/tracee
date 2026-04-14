@@ -55,7 +55,7 @@ const pages: PageDef[] = [
     toc: [
       { id: "prerequisites", label: "Prerequisites" },
       { id: "clone", label: "Clone the repository" },
-      { id: "install", label: "Install the package" },
+      { id: "install", label: "Install dependencies" },
       { id: "start-server", label: "Start the server" },
       { id: "configure-env", label: "Configure environment" },
       { id: "instrument-app", label: "Instrument your app" },
@@ -125,7 +125,7 @@ const pages: PageDef[] = [
 
 /* ── code snippets ─────────────────────────────────── */
 const cloneSnippet = `git clone https://github.com/fig-x/tracee.git\ncd tracee`;
-const installSnippet = `uv add 'tracee[server]'`;
+const installSnippet = `uv sync --extra server`;
 const startServerSnippet = `uv run tracee serve`;
 const envSnippet = `# .env (in the directory where you run tracee serve)
 OPENAI_API_KEY=sk-...`;
@@ -468,6 +468,7 @@ function SetupPage() {
       <ul className="docs__list">
         <li>Python 3.11 or later</li>
         <li><a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener noreferrer">uv</a> (recommended) or pip as your package manager</li>
+        <li>Node.js v18 or later and npm (the frontend is built automatically on first run)</li>
         <li>A LangGraph workflow you want to instrument (<code>langgraph</code> installed in your project)</li>
         <li>An OpenAI API key if you plan to use the Playground or Cognition analysis features</li>
       </ul>
@@ -475,17 +476,25 @@ function SetupPage() {
       <h3 id="clone" className="docs__subsection-title">1. Clone the repository</h3>
       <CodeBlock code={cloneSnippet} />
 
-      <h3 id="install" className="docs__subsection-title">2. Install the package</h3>
+      <h3 id="install" className="docs__subsection-title">2. Install dependencies</h3>
       <p className="docs__prose">
         We recommend using <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener noreferrer">uv</a> for fast, reliable dependency management.
       </p>
       <CodeBlock code={installSnippet} />
 
       <h3 id="start-server" className="docs__subsection-title">3. Start the server</h3>
-      <p className="docs__prose">The built-in UI is served automatically — no separate frontend build step required.</p>
       <CodeBlock code={startServerSnippet} label="start the server" />
-      <p className="docs__prose">Override the port and host:</p>
+      <p className="docs__prose">
+        On the first run, this automatically builds the frontend (<code>npm install</code> + <code>npm run build</code> inside <code>playground-ui/</code>).
+        Subsequent runs skip the build since <code>playground-ui/dist/</code> already exists.
+      </p>
       <p className="docs__prose">Open <code>http://localhost:8000</code> in your browser. The Graph page will be empty until you register a workflow.</p>
+      <Callout type="tip" title="Rebuilding the frontend">
+        <p>
+          To force a frontend rebuild (e.g. after pulling new changes), delete <code>playground-ui/dist/</code> and
+          re-run <code>tracee serve</code>. Pass <code>--skip-build</code> to skip the automatic build entirely.
+        </p>
+      </Callout>
 
       <h3 id="configure-env" className="docs__subsection-title">4. Configure environment</h3>
       <p className="docs__prose">The server loads a <code>.env</code> file from the working directory on startup.</p>

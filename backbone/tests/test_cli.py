@@ -17,6 +17,7 @@ class TestCli:
         monkeypatch.setattr(cli.importlib.util, "find_spec", lambda name: object())
         monkeypatch.setitem(sys.modules, "uvicorn", SimpleNamespace(run=lambda *args, **kwargs: calls.append((args, kwargs))))
         monkeypatch.setattr(sys, "argv", ["tracee", "serve", "--host", "127.0.0.1", "--port", "9001"])
+        monkeypatch.setattr(cli, "_build_frontend", lambda: None)
 
         cli.main()
 
@@ -30,6 +31,7 @@ class TestCli:
     def test_serve_subcommand_requires_server_extras(self, monkeypatch):
         monkeypatch.setattr(cli.importlib.util, "find_spec", lambda name: None if name == "uvicorn" else object())
         monkeypatch.setattr(sys, "argv", ["tracee", "serve"])
+        monkeypatch.setattr(cli, "_build_frontend", lambda: None)
 
         with pytest.raises(SystemExit) as exc:
             cli.main()

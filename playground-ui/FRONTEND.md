@@ -154,6 +154,16 @@ Each folder is a self-contained part of the application:
 | `components/` | Playground-specific form, result, diff, and prompt-library components. |
 | `playground.css` | Styles scoped to the playground feature. |
 
+**`features/prompts/`** -- The prompt library and version comparison page.
+
+**`features/docs/`** -- In-app documentation with setup guide, feature walkthroughs, and troubleshooting.
+
+| File | Purpose |
+|------|---------|
+| `DocsPage.tsx` | Multi-page documentation viewer with TOC navigation and inline screenshots. |
+| `docs.css` | Styles scoped to the docs feature. |
+| `img/` | Screenshot images used in the documentation. |
+
 ## Key Concepts
 
 ### The Two-Layer Model
@@ -285,14 +295,16 @@ export interface MyType {
 
 ## Routing
 
-The app has two routes, defined in `src/App.tsx`:
+The app has four routes, defined in `src/App.tsx`:
 
 | Path | Component | Description |
 |------|-----------|-------------|
 | `/` | `GraphViewer` | The main graph visualization page |
 | `/playground` | `PlaygroundPage` | The prompt testing page |
+| `/prompts` | `PromptsPage` | The prompt library and version comparison page |
+| `/docs` | `DocsPage` | In-app documentation and setup guide |
 
-Both are wrapped in `AppShell`, which provides the top navigation bar. The router uses `react-router-dom` v7 with the `BrowserRouter` component.
+All are wrapped in `AppShell`, which provides the top navigation bar. The router uses `react-router-dom` v7 with the `BrowserRouter` component.
 
 ## Environment and Configuration
 
