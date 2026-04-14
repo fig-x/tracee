@@ -114,8 +114,9 @@ const pages: PageDef[] = [
 ];
 
 /* ── code snippets ─────────────────────────────────── */
-const installSnippet = `pip install tracee`;
-const installServerSnippet = `pip install 'tracee[server]'`;
+const installSnippet = `uv add tracee`;
+const installPipSnippet = `pip install tracee`;
+const installServerSnippet = `uv add 'tracee[server]'`;
 const startServerSnippet = `tracee serve`;
 const startServerOptionsSnippet = `tracee serve --port 8000 --host 0.0.0.0`;
 const envSnippet = `# .env (in the directory where you run tracee serve)
@@ -132,8 +133,6 @@ tracee.init(
     app,
     graph_id="my-workflow",
     name="My Workflow",
-    description="Orchestrates planning and execution agents",
-    server_url="http://localhost:8000",
 )
 
 # wrap any invocation in tracee.trace() to record it
@@ -148,8 +147,6 @@ tracee.init(
     app,
     graph_id="your-graph-id",
     name="Your workflow name",
-    description="What this graph does",
-    server_url="http://localhost:8000",
 )
 
 with tracee.trace():
@@ -436,6 +433,7 @@ function SetupPage() {
       <h3 id="prerequisites" className="docs__subsection-title">Prerequisites</h3>
       <ul className="docs__list">
         <li>Python 3.11 or later</li>
+        <li><a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener noreferrer">uv</a> (recommended) or pip as your package manager</li>
         <li>A LangGraph workflow you want to instrument (<code>langgraph</code> installed in your project)</li>
         <li>An OpenAI API key if you plan to use the Playground or Cognition analysis features</li>
       </ul>
@@ -443,8 +441,11 @@ function SetupPage() {
       <h3 id="install" className="docs__subsection-title">1. Install the package</h3>
       <p className="docs__prose">
         The core SDK is lightweight and only depends on <code>httpx</code>, <code>langchain-core</code>, and <code>pydantic</code>.
+        We recommend using <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener noreferrer">uv</a> for fast, reliable dependency management.
       </p>
-      <CodeBlock code={installSnippet} label="core SDK" />
+      <CodeBlock code={installSnippet} label="core SDK (uv)" />
+      <p className="docs__prose">Or with pip:</p>
+      <CodeBlock code={installPipSnippet} label="core SDK (pip)" />
       <p className="docs__prose">To also run the Tracee server and UI locally, install with the server extras:</p>
       <CodeBlock code={installServerSnippet} label="with server + UI" />
 
