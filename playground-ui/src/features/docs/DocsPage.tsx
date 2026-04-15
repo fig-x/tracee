@@ -12,7 +12,6 @@ import cognitionSummaryImg from "./img/cognition-layer-summary.png";
 import iconLightbulb from "../../assets/icon-lightbulb.svg";
 import iconInfoOctagon from "../../assets/icon-info-octagon.svg";
 import pgWorkspaceImg from "./img/playground-workspace.png";
-import pgOverviewPanelImg from "./img/prompt-overview-panel.png";
 import pgAddComponentImg from "./img/playground-add-component.png";
 import pgComponentsImg from "./img/playground-prompt-components.png";
 import pgConfigImg from "./img/playground-configurations.png";
