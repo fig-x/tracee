@@ -186,21 +186,79 @@ export function TraceSelector({
       setTraces([]);
       return;
     }
+
     let cancelled = false;
-    fetchTraces(100, 0, graphId)
-      .then((items) => {
-        if (cancelled) return;
-        const sorted = [...items].sort(
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const mergeTraces = (incoming: TraceMetadata[]) => {
+      setTraces((current) => {
+        const byId = new Map<string, TraceMetadata>();
+        for (const trace of current) byId.set(trace.trace_id, trace);
+        // incoming wins — picks up updated event_count / updated_at
+        for (const trace of incoming) byId.set(trace.trace_id, trace);
+        const merged = Array.from(byId.values()).sort(
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
         );
-        setTraces(sorted);
-      })
-      .catch(() => {
-        if (!cancelled) setTraces([]);
+        // skip state update if nothing changed — avoids re-triggering downstream effects
+        if (merged.length === current.length) {
+          let same = true;
+          for (let i = 0; i < merged.length; i++) {
+            const a = merged[i];
+            const b = current[i];
+            if (
+              a.trace_id !== b.trace_id ||
+              a.event_count !== b.event_count ||
+              a.updated_at !== b.updated_at
+            ) {
+              same = false;
+              break;
+            }
+          }
+          if (same) return current;
+        }
+        return merged;
       });
+    };
+
+    const POLL_INTERVAL_MS = 3000;
+
+    const poll = async () => {
+      if (cancelled) return;
+      if (typeof document !== "undefined" && document.hidden) {
+        timeoutId = setTimeout(poll, POLL_INTERVAL_MS);
+        return;
+      }
+      try {
+        const items = await fetchTraces(100, 0, graphId);
+        if (cancelled) return;
+        mergeTraces(items);
+      } catch {
+        // swallow — next tick will retry
+      }
+      if (cancelled) return;
+      timeoutId = setTimeout(poll, POLL_INTERVAL_MS);
+    };
+
+    // kick off immediately, then poll on an interval
+    poll();
+
+    // resume immediately when the tab becomes visible again
+    const handleVisibility = () => {
+      if (cancelled) return;
+      if (!document.hidden) {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = null;
+        }
+        poll();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, [layer, graphId]);
 
@@ -214,9 +272,13 @@ export function TraceSelector({
       return;
     }
 
+    // only fetch summaries for traces we haven't seen yet — avoids re-fetching
+    // N summaries on every poll tick.
+    const missing = traces.filter((trace) => !(trace.trace_id in summaries));
+    if (missing.length === 0) return;
+
     let cancelled = false;
-    setSummaries({});
-    for (const trace of traces) {
+    for (const trace of missing) {
       fetchTraceSummary(trace.trace_id)
         .then((summary) => {
           if (cancelled) return;
@@ -228,7 +290,7 @@ export function TraceSelector({
     return () => {
       cancelled = true;
     };
-  }, [layer, traces]);
+  }, [layer, traces, summaries]);
 
   useEffect(() => {
     if (!isTraceLayer(layer)) return;
