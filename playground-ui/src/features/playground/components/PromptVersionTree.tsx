@@ -437,7 +437,6 @@ const PromptVersionTree: React.FC<Props> = ({
           );
           const componentLabels = getComponentLabels(entry.components);
           const diffTags = renderDiffTags(entry);
-          const diffLabel = entry.kind === 'draft' ? 'draft status' : 'changes from parent';
 
           return (
             <div key={entry.versionId} className="version-tree__row">
@@ -510,7 +509,6 @@ const PromptVersionTree: React.FC<Props> = ({
                   </div>
                 )}
                 <div className="version-tree__meta-section">
-                  <div className="section-label version-tree__meta-label">components</div>
                   <div className="version-tree__node-components">
                     {componentLabels.length > 0 ? componentLabels.map((componentLabel) => (
                       <span key={`${entry.versionId}-${componentLabel.key}`} className="version-tree__component-chip">
@@ -525,13 +523,11 @@ const PromptVersionTree: React.FC<Props> = ({
                 </div>
                 {entry.revisionNote && (
                   <div className="version-tree__meta-section">
-                    <div className="section-label version-tree__meta-label">revision note</div>
                     <div className="version-tree__node-note">{entry.revisionNote}</div>
                   </div>
                 )}
                 {diffTags && (
                   <div className="version-tree__meta-section">
-                    <div className="section-label version-tree__meta-label">{diffLabel}</div>
                     {diffTags}
                   </div>
                 )}
