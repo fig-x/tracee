@@ -454,7 +454,6 @@ const PromptForm: React.FC<Props> = ({
       selectedGuidedRole.components.map((comp) => [comp.component_type, comp.prevalence])
     ) as Record<PromptComponentType, number>;
   }, [selectedGuidedRole, guidedOverlayStep]);
-  const workspaceModeHintId = React.useId();
 
   const {
     loading, setupError, execute,
@@ -515,7 +514,6 @@ const PromptForm: React.FC<Props> = ({
         className={`seg-control__btn${mode === 'analysis' ? ' is-active' : ''}`}
         onClick={handleAnalysisNavClick}
         aria-pressed={mode === 'analysis'}
-        aria-describedby={mode === 'author' && !hasResults ? workspaceModeHintId : undefined}
         disabled={!hasResults}
       >
         <span>Outputs</span>
@@ -1849,11 +1847,6 @@ const PromptForm: React.FC<Props> = ({
                           </button>
                           {executeRunControl}
                         </div>
-                        {!hasResults && (
-                          <span id={workspaceModeHintId} className="field__hint create-run__workspace-mode-hint">
-                            run the prompt once to unlock analysis.
-                          </span>
-                        )}
                       </div>
 
                       {activeSchemaError && activePanel !== 'schema' && (
