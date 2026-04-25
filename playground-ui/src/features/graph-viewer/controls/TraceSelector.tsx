@@ -174,6 +174,7 @@ export function TraceSelector({
   const [showTraceList, setShowTraceList] = useState(true);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const cardRef = useRef<HTMLElement | null>(null);
+  const fetchedSummaryIdsRef = useRef<Set<string>>(new Set());
   const showsOperationOutline = isTraceLayer(layer);
 
   const selectedTrace = useMemo(
@@ -263,34 +264,34 @@ export function TraceSelector({
   }, [layer, graphId]);
 
   useEffect(() => {
-    if (!isTraceLayer(layer)) {
-      setSummaries({});
-      return;
-    }
-    if (traces.length === 0) {
-      setSummaries({});
+    if (!isTraceLayer(layer) || traces.length === 0) {
+      fetchedSummaryIdsRef.current = new Set();
+      setSummaries((current) => (Object.keys(current).length === 0 ? current : {}));
       return;
     }
 
     // only fetch summaries for traces we haven't seen yet — avoids re-fetching
     // N summaries on every poll tick.
-    const missing = traces.filter((trace) => !(trace.trace_id in summaries));
+    const missing = traces.filter((trace) => !fetchedSummaryIdsRef.current.has(trace.trace_id));
     if (missing.length === 0) return;
 
     let cancelled = false;
     for (const trace of missing) {
+      fetchedSummaryIdsRef.current.add(trace.trace_id);
       fetchTraceSummary(trace.trace_id)
         .then((summary) => {
           if (cancelled) return;
           setSummaries((current) => ({ ...current, [trace.trace_id]: summary }));
         })
-        .catch(() => {});
+        .catch(() => {
+          fetchedSummaryIdsRef.current.delete(trace.trace_id);
+        });
     }
 
     return () => {
       cancelled = true;
     };
-  }, [layer, traces, summaries]);
+  }, [layer, traces]);
 
   useEffect(() => {
     if (!isTraceLayer(layer)) return;
