@@ -57,12 +57,30 @@ def _truncate(value: Any, max_chars: int = 4000) -> Any:
     return value
 
 
+def _is_empty_value(value) -> bool:
+    """treat None, "", {}, [] as semantically equivalent (empty)."""
+    if value is None:
+        return True
+    if isinstance(value, (str, list, dict)) and len(value) == 0:
+        return True
+    return False
+
+
 def _diff_state_keys(before: dict, after: dict) -> list[str]:
-    """return sorted list of keys that differ between two state dicts."""
+    """return sorted list of keys that differ between two state dicts.
+
+    A key is reported only when its value actually changed in a meaningful way.
+    Missing keys and empty containers/strings are treated as equivalent, so
+    e.g. {} -> absent or "" -> None is not flagged as a change.
+    """
     all_keys = set(before.keys()) | set(after.keys())
     changed = []
     for key in all_keys:
-        if json.dumps(before.get(key), sort_keys=True) != json.dumps(after.get(key), sort_keys=True):
+        b = before.get(key)
+        a = after.get(key)
+        if _is_empty_value(b) and _is_empty_value(a):
+            continue
+        if json.dumps(b, sort_keys=True) != json.dumps(a, sort_keys=True):
             changed.append(key)
     return sorted(changed)
 

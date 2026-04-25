@@ -78,10 +78,11 @@ function findOperationByChip(
     );
   }
   if (chipType === "state") {
+    const target = chipValue.toLowerCase();
     return operations.find(
       (op) => op.type === "state_update"
         && op.metadata?.changedKeys
-        && (op.metadata.changedKeys as string[]).some((k: string) => k.toLowerCase().includes(chipValue.toLowerCase())),
+        && (op.metadata.changedKeys as string[]).some((k: string) => k.toLowerCase() === target),
     );
   }
   return undefined;
@@ -92,6 +93,9 @@ export function CognitionDetails({ node }: Props) {
   const exec = node.execution;
   const operations = exec?.operations ?? EMPTY_OPERATIONS;
   const [expandedOp, setExpandedOp] = useState<AgentOperation | null>(null);
+  // When expansion was triggered by clicking a state chip, narrow the rendered
+  // diff to just that key instead of showing every key the op touched.
+  const [focusedStateKey, setFocusedStateKey] = useState<string | null>(null);
   const [unmatchedChip, setUnmatchedChip] = useState<string | null>(null);
   const unmatchedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { chipExpansion, clearChipExpansion } = useSidebar();
@@ -108,6 +112,7 @@ export function CognitionDetails({ node }: Props) {
     const op = findOperationByChip(chipExpansion.type, chipExpansion.value, operations);
     if (op) {
       setExpandedOp(op);
+      setFocusedStateKey(chipExpansion.type === "state" ? chipExpansion.value : null);
     } else {
       showUnmatchedChip(chipExpansion.value);
     }
@@ -131,14 +136,21 @@ export function CognitionDetails({ node }: Props) {
     const op = findOperationByChip(chipType, chipValue, operations);
     if (op) {
       setUnmatchedChip(null);
-      setExpandedOp((prev) => prev?.id === op.id ? null : op);
+      setExpandedOp((prev) => {
+        const next = prev?.id === op.id ? null : op;
+        setFocusedStateKey(next && chipType === "state" ? chipValue : null);
+        return next;
+      });
     } else {
       showUnmatchedChip(chipValue);
     }
   };
 
   const isStateUpdate = expandedOp?.type === "state_update";
-  const changedKeys = (expandedOp?.metadata?.changedKeys ?? []) as string[];
+  const allChangedKeys = (expandedOp?.metadata?.changedKeys ?? []) as string[];
+  const changedKeys = focusedStateKey
+    ? allChangedKeys.filter((k) => k.toLowerCase() === focusedStateKey.toLowerCase())
+    : allChangedKeys;
 
   return (
     <>
@@ -182,7 +194,7 @@ export function CognitionDetails({ node }: Props) {
             </span>
             <button
               className="cognition-detail__close-op"
-              onClick={() => setExpandedOp(null)}
+              onClick={() => { setExpandedOp(null); setFocusedStateKey(null); }}
               aria-label="close"
             >
               &times;

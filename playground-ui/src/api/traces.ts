@@ -17,3 +17,7 @@ export async function fetchTraceSummary(traceId: string): Promise<TraceSummary> 
   const { data } = await client.get<TraceSummary>(`/traces/${traceId}/summary`);
   return data;
 }
+
+export async function deleteTrace(traceId: string): Promise<void> {
+  await client.delete(`/traces/${traceId}`);
+}

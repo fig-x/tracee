@@ -43,7 +43,7 @@ import iconExecuteRun from '../../../assets/icon-executerun.svg';
 import iconCreateNewPrompt from '../../../assets/icon-createnewprompt.svg';
 import iconLoadFromExisting from '../../../assets/icon-loadfromexisting.svg';
 import iconTrash from '../../../assets/icon-trash.svg';
-import { promptAPI } from '../../../services/api';
+import { promptAPI, providerAPI } from '../../../services/api';
 import { generateUniquePromptId, slugifyPromptName } from '../../../utils/promptNaming';
 import { resizeTextarea } from '../../../utils/resizeTextarea';
 import {
@@ -81,8 +81,11 @@ interface Props {
   onClearAnchor: () => void;
 }
 
-const PROVIDER_MODELS: Record<string, string[]> = {
-  openai: ['gpt-4o', 'gpt-4o-mini'],
+// Sensible defaults shown before the dynamic models list resolves (or if the
+// /providers/openai/models endpoint fails). The hook below replaces these
+// once the live list arrives.
+const FALLBACK_PROVIDER_MODELS: Record<string, string[]> = {
+  openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini'],
 };
 
 const DEFAULT_PROMPT_COMPONENTS: PromptComponent[] = [
@@ -407,6 +410,20 @@ const PromptForm: React.FC<Props> = ({
   const [inputVars, setInputVars] = React.useState<Record<string, string>>(DEFAULT_INPUT_VARS);
   const [provider, setProvider] = React.useState('openai');
   const [model, setModel] = React.useState('gpt-4o');
+  const [providerModels, setProviderModels] = React.useState<Record<string, string[]>>(FALLBACK_PROVIDER_MODELS);
+
+  // load the live list of OpenAI models so the dropdown reflects what the
+  // user actually has access to (and gets new model families automatically).
+  React.useEffect(() => {
+    let cancelled = false;
+    providerAPI.listOpenAIModels()
+      .then((response) => {
+        if (cancelled || response.models.length === 0) return;
+        setProviderModels((current) => ({ ...current, openai: response.models }));
+      })
+      .catch(() => { /* keep fallbacks */ });
+    return () => { cancelled = true; };
+  }, []);
   const [temperature, setTemperature] = React.useState(0);
   const [numRuns, setNumRuns] = React.useState(1);
   const [activePanel, setActivePanel] = React.useState<WorkspacePanel | null>(null);
@@ -534,7 +551,7 @@ const PromptForm: React.FC<Props> = ({
 
   const handleProviderChange = (newProvider: string) => {
     setProvider(newProvider);
-    const models = PROVIDER_MODELS[newProvider];
+    const models = providerModels[newProvider];
     if (models && models.length > 0) {
       setModel(models[0]);
     }
@@ -2158,7 +2175,7 @@ const PromptForm: React.FC<Props> = ({
                               value={model}
                               onChange={(e) => setModel(e.target.value)}
                             >
-                              {(PROVIDER_MODELS[provider] ?? []).map((availableModel) => (
+                              {(providerModels[provider] ?? []).map((availableModel) => (
                                 <option key={availableModel} value={availableModel}>
                                   {availableModel}
                                 </option>

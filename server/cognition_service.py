@@ -23,6 +23,19 @@ from server.llm_clients import get_openai_client
 
 logger = logging.getLogger(__name__)
 
+
+def _is_empty_value(value: Any) -> bool:
+    """treat None, "", {}, [] as semantically equivalent (empty).
+
+    Mirrors backbone.analysis.agent_analyzer._is_empty_value — duplicated to
+    avoid a cross-package import for a one-liner.
+    """
+    if value is None:
+        return True
+    if isinstance(value, (str, list, dict)) and len(value) == 0:
+        return True
+    return False
+
 DEFAULT_MODEL = "gpt-4o-mini"
 
 # ── function schemas for structured output ──────────────────────
@@ -243,8 +256,19 @@ def _build_node_user_message(
         lines.append(json.dumps(segment.output_state, indent=2, default=str))
         lines.append("")
 
-    if segment.changed_keys:
-        lines.append(f"## State changes: {json.dumps(segment.changed_keys)}")
+    # Filter out keys whose value is empty on both sides (e.g. {} -> absent).
+    # Older traces in the DB were computed before agent_analyzer's empty-equivalence
+    # fix and may include such non-changes; drop them here so the LLM isn't told
+    # about state changes that didn't actually happen.
+    meaningful_changes = [
+        key for key in segment.changed_keys
+        if not (
+            _is_empty_value((segment.input_state or {}).get(key))
+            and _is_empty_value((segment.output_state or {}).get(key))
+        )
+    ]
+    if meaningful_changes:
+        lines.append(f"## State changes: {json.dumps(meaningful_changes)}")
 
     return "\n".join(lines)
 

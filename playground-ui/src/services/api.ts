@@ -128,3 +128,25 @@ export const guidedStartAPI = {
     return data;
   },
 };
+
+export interface OpenAIModelsResponse {
+  models: string[];
+  source: "openai" | "fallback";
+  reason?: string;
+}
+
+export interface OpenAIStatusResponse {
+  configured: boolean;
+}
+
+export const providerAPI = {
+  async getOpenAIStatus(): Promise<OpenAIStatusResponse> {
+    const { data } = await client.get<OpenAIStatusResponse>("/providers/openai/status");
+    return data;
+  },
+
+  async listOpenAIModels(): Promise<OpenAIModelsResponse> {
+    const { data } = await client.get<OpenAIModelsResponse>("/providers/openai/models");
+    return data;
+  },
+};

@@ -17,6 +17,7 @@ from server.prompt_routes import router as prompt_router
 from server.playground_routes import router as playground_router
 from server.db import init_all
 from server.model_config_routes import router as model_config_router
+from server.provider_routes import router as provider_router
 from server.trace_db import TRACE_DB_PATH
 
 from dotenv import load_dotenv
@@ -58,6 +59,7 @@ app.include_router(guided_start_router, prefix="/api")
 app.include_router(model_config_router, prefix="/api")
 app.include_router(agent_router, prefix="/api")
 app.include_router(graph_router, prefix="/api")
+app.include_router(provider_router, prefix="/api")
 
 
 @app.get("/api/health")

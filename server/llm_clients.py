@@ -20,6 +20,43 @@ class LlmMessage(TypedDict):
     content: str
 
 
+def _extract_openai_error(exc: Exception, *, model: str, op: str) -> tuple[int, str]:
+    """Pull a usable status + message out of an OpenAI SDK exception.
+
+    Falls back gracefully when the SDK isn't loaded or the exception shape
+    doesn't match what we expect. Always includes the model and op so the
+    user can see which call failed.
+    """
+    status_code = 500
+    message: str | None = None
+
+    try:
+        import openai  # local import — keeps cold-start cheap
+    except Exception:
+        openai = None  # type: ignore[assignment]
+
+    if openai is not None:
+        api_status = getattr(openai, "APIStatusError", None)
+        api_conn = getattr(openai, "APIConnectionError", None)
+        if api_status is not None and isinstance(exc, api_status):
+            status_code = getattr(exc, "status_code", 500) or 500
+            body = getattr(exc, "body", None)
+            if isinstance(body, dict):
+                err = body.get("error")
+                if isinstance(err, dict) and isinstance(err.get("message"), str):
+                    message = err["message"]
+            if not message:
+                message = getattr(exc, "message", None)
+        elif api_conn is not None and isinstance(exc, api_conn):
+            status_code = 502
+            message = "could not reach the OpenAI API (connection error)"
+
+    if not message:
+        message = str(exc) or exc.__class__.__name__
+
+    return status_code, f"OpenAI {op} failed (model={model}): {message}"
+
+
 def get_openai_client():
     """Get or create the OpenAI client."""
     global _openai_client
@@ -29,8 +66,11 @@ def get_openai_client():
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise HTTPException(
-                status_code=500,
-                detail="OPENAI_API_KEY environment variable not set",
+                status_code=400,
+                detail=(
+                    "OPENAI_API_KEY is not set. Add it to the .env file in the "
+                    "directory where you run `tracee serve`, then restart the server."
+                ),
             )
         _openai_client = openai.AsyncOpenAI(api_key=api_key)
     return _openai_client
@@ -49,8 +89,22 @@ def build_openai_response_format(schema: dict, *, strict: bool = True) -> dict:
 
 
 def supports_openai_json_schema(model: str) -> bool:
-    """Return whether the model supports json_schema output."""
-    return model.startswith("gpt-4o") or model.startswith("gpt-4.1")
+    """Return whether the model supports json_schema response_format.
+
+    The list grows over time — keep prefixes broad so newly released models in
+    these families work without requiring a server change. The o1 family
+    explicitly does not support response_format yet.
+    """
+    if model.startswith("o1"):
+        return False
+    return (
+        model.startswith("gpt-4o")
+        or model.startswith("gpt-4.1")
+        or model.startswith("gpt-5")
+        or model.startswith("o3")
+        or model.startswith("o4")
+        or model.startswith("chatgpt-")
+    )
 
 
 def build_openai_tool(tool: PromptTool) -> dict:
@@ -129,12 +183,10 @@ async def call_openai_messages(
         }
     except HTTPException:
         raise
-    except Exception:
+    except Exception as exc:
         logger.exception("OpenAI API call failed (model=%s)", model)
-        raise HTTPException(
-            status_code=500,
-            detail="OpenAI API error. See server logs for details.",
-        )
+        status_code, detail = _extract_openai_error(exc, model=model, op="chat completion")
+        raise HTTPException(status_code=status_code, detail=detail)
 
 
 async def embed_openai_texts(
@@ -167,12 +219,10 @@ async def embed_openai_texts(
         return embeddings
     except HTTPException:
         raise
-    except Exception:
+    except Exception as exc:
         logger.exception("OpenAI embeddings call failed (model=%s)", model)
-        raise HTTPException(
-            status_code=500,
-            detail="OpenAI embeddings error. See server logs for details.",
-        )
+        status_code, detail = _extract_openai_error(exc, model=model, op="embedding")
+        raise HTTPException(status_code=status_code, detail=detail)
 
 
 async def call_llm_messages(

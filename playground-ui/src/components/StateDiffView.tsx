@@ -28,13 +28,24 @@ export function StateDiffView({ input, output, changedKeys }: StateDiffViewProps
   const prevState = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
   const nextState = (output && typeof output === "object" ? output : {}) as Record<string, unknown>;
 
-  if (changedKeys.length === 0) return null;
+  // Drop keys that produce no meaningful diff: either absent from both snapshots,
+  // or present but rendering as empty on both sides (e.g. {} -> missing). The
+  // upstream op metadata sometimes over-reports changedKeys; this hides the noise.
+  const rows = changedKeys
+    .map((key) => ({
+      key,
+      before: formatDiffValue(prevState[key]),
+      after: formatDiffValue(nextState[key]),
+      inPrev: Object.prototype.hasOwnProperty.call(prevState, key),
+      inNext: Object.prototype.hasOwnProperty.call(nextState, key),
+    }))
+    .filter((r) => (r.inPrev || r.inNext) && !(r.before.empty && r.after.empty));
+
+  if (rows.length === 0) return null;
 
   return (
     <div className="state-diff">
-      {changedKeys.map((key) => {
-        const before = formatDiffValue(prevState[key]);
-        const after = formatDiffValue(nextState[key]);
+      {rows.map(({ key, before, after }) => {
         return (
           <div key={key} className="state-diff__entry">
             <div className="state-diff__key">{key}</div>

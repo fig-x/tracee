@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Edge, Node } from "@xyflow/react";
-import { fetchTraceSummary, fetchTraces } from "../../../api/traces";
+import { deleteTrace, fetchTraceSummary, fetchTraces } from "../../../api/traces";
 import { useLayer } from "../../../context/LayerContext";
 import type { Layer } from "../../../context/LayerContext";
 import type { GraphEdgeData, GraphNodeData, TraceOutlineItem, TraceOutlineItemKind } from "../../../types/node-data";
@@ -12,6 +12,8 @@ import iconCode from "../../../assets/icon-code.svg";
 import iconCollapse from "../../../assets/icon-collapse.svg";
 import iconError from "../../../assets/icon-error.svg";
 import iconExpand from "../../../assets/icon-expand.svg";
+import iconTrash from "../../../assets/icon-trash.svg";
+import iconRetry from "../../../assets/icon-retry.svg";
 import iconLlm from "../../../assets/icon-llm.svg";
 import iconRag from "../../../assets/icon-rag.svg";
 import iconState from "../../../assets/icon-state.svg";
@@ -173,9 +175,28 @@ export function TraceSelector({
   const [maxHeight, setMaxHeight] = useState<number | null>(null);
   const [showTraceList, setShowTraceList] = useState(true);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const cardRef = useRef<HTMLElement | null>(null);
   const fetchedSummaryIdsRef = useRef<Set<string>>(new Set());
+  const refreshTracesRef = useRef<(() => Promise<void>) | null>(null);
   const showsOperationOutline = isTraceLayer(layer);
+
+  const allOutlineIds = useMemo(() => {
+    const ids: string[] = [];
+    const walk = (items: TraceOutlineItem[]) => {
+      for (const item of items) {
+        if (item.children.length > 0) {
+          ids.push(item.id);
+          walk(item.children);
+        }
+      }
+    };
+    walk(outline);
+    return ids;
+  }, [outline]);
+  const allCollapsed = allOutlineIds.length > 0 && allOutlineIds.every((id) => collapsedIds.has(id));
 
   const selectedTrace = useMemo(
     () => traces.find((trace) => trace.trace_id === selectedTraceId) ?? null,
@@ -185,16 +206,19 @@ export function TraceSelector({
   useEffect(() => {
     if (!isTraceLayer(layer)) {
       setTraces([]);
+      refreshTracesRef.current = null;
       return;
     }
 
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    const mergeTraces = (incoming: TraceMetadata[]) => {
+    const mergeTraces = (incoming: TraceMetadata[], { replace = false }: { replace?: boolean } = {}) => {
       setTraces((current) => {
         const byId = new Map<string, TraceMetadata>();
-        for (const trace of current) byId.set(trace.trace_id, trace);
+        if (!replace) {
+          for (const trace of current) byId.set(trace.trace_id, trace);
+        }
         // incoming wins — picks up updated event_count / updated_at
         for (const trace of incoming) byId.set(trace.trace_id, trace);
         const merged = Array.from(byId.values()).sort(
@@ -238,6 +262,17 @@ export function TraceSelector({
       }
       if (cancelled) return;
       timeoutId = setTimeout(poll, POLL_INTERVAL_MS);
+    };
+
+    refreshTracesRef.current = async () => {
+      try {
+        const items = await fetchTraces(100, 0, graphId);
+        if (cancelled) return;
+        // replace on manual refresh so deletions on the server are reflected
+        mergeTraces(items, { replace: true });
+      } catch {
+        // swallow — next poll will retry
+      }
     };
 
     // kick off immediately, then poll on an interval
@@ -368,6 +403,46 @@ export function TraceSelector({
     });
   };
 
+  const handleCollapseAll = () => {
+    setCollapsedIds(new Set(allOutlineIds));
+  };
+
+  const handleExpandAll = () => {
+    setCollapsedIds(new Set());
+  };
+
+  const handleRefresh = async () => {
+    if (refreshing || !refreshTracesRef.current) return;
+    setRefreshing(true);
+    try {
+      await refreshTracesRef.current();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const handleConfirmDelete = async (traceId: string) => {
+    if (deletingId) return;
+    setDeletingId(traceId);
+    try {
+      await deleteTrace(traceId);
+      setTraces((current) => current.filter((trace) => trace.trace_id !== traceId));
+      setSummaries((current) => {
+        if (!(traceId in current)) return current;
+        const next = { ...current };
+        delete next[traceId];
+        return next;
+      });
+      fetchedSummaryIdsRef.current.delete(traceId);
+      if (selectedTraceId === traceId) setSelectedTraceId(null);
+    } catch {
+      // swallow — user can retry; polling will reconcile
+    } finally {
+      setDeletingId(null);
+      setPendingDeleteId(null);
+    }
+  };
+
   return (
     <section
       ref={cardRef}
@@ -386,15 +461,50 @@ export function TraceSelector({
             </div>
           )}
         </div>
-        {showsOperationOutline && !showTraceList && (
-          <button
-            type="button"
-            className="trace-selector-card__header-btn"
-            onClick={() => setShowTraceList(true)}
-          >
-            back to traces
-          </button>
-        )}
+        <div className="trace-selector-card__header-actions">
+          {showsOperationOutline && !showTraceList ? (
+            <>
+              <button
+                type="button"
+                className="trace-selector-card__icon-btn"
+                onClick={allCollapsed ? handleExpandAll : handleCollapseAll}
+                disabled={allOutlineIds.length === 0}
+                title={allCollapsed ? "expand all" : "collapse all"}
+                aria-label={allCollapsed ? "expand all branches" : "collapse all branches"}
+              >
+                <img
+                  src={allCollapsed ? iconExpand : iconCollapse}
+                  alt=""
+                  className="trace-selector-card__icon-btn-icon"
+                  aria-hidden
+                />
+              </button>
+              <button
+                type="button"
+                className="trace-selector-card__header-btn"
+                onClick={() => setShowTraceList(true)}
+              >
+                back to traces
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className={`trace-selector-card__icon-btn${refreshing ? " is-spinning" : ""}`}
+              onClick={handleRefresh}
+              disabled={refreshing}
+              title="refresh traces"
+              aria-label="refresh trace list"
+            >
+              <img
+                src={iconRetry}
+                alt=""
+                className="trace-selector-card__icon-btn-icon"
+                aria-hidden
+              />
+            </button>
+          )}
+        </div>
       </header>
       {showsOperationOutline && !showTraceList ? (
         <div className="trace-outline">
@@ -424,12 +534,21 @@ export function TraceSelector({
           ) : (
             traces.map((t) => {
               const isSelected = selectedTraceId === t.trace_id;
+              const isPendingDelete = pendingDeleteId === t.trace_id;
+              const isDeleting = deletingId === t.trace_id;
               return (
-                <button
+                <div
                   key={t.trace_id}
-                  type="button"
                   className={`trace-selector-item ${isSelected ? "is-selected" : ""}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => handleTraceSelect(t.trace_id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleTraceSelect(t.trace_id);
+                    }
+                  }}
                 >
                   <div className="trace-selector-item__header">
                     <span className="trace-selector-item__id" title={t.trace_id}>
@@ -442,15 +561,57 @@ export function TraceSelector({
                       <span className="trace-selector-item__latency">
                         {calculateLatency(t.created_at, t.updated_at)}
                       </span>
+                      {isPendingDelete ? (
+                        <span
+                          className="trace-selector-item__confirm"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className="trace-selector-item__confirm-btn trace-selector-item__confirm-btn--danger"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleConfirmDelete(t.trace_id);
+                            }}
+                            disabled={isDeleting}
+                          >
+                            {isDeleting ? "..." : "delete"}
+                          </button>
+                          <button
+                            type="button"
+                            className="trace-selector-item__confirm-btn"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setPendingDeleteId(null);
+                            }}
+                            disabled={isDeleting}
+                          >
+                            cancel
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="trace-selector-item__delete-btn"
+                          title="delete trace"
+                          aria-label={`delete trace ${t.trace_id.slice(0, 8)}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setPendingDeleteId(t.trace_id);
+                          }}
+                        >
+                          <img
+                            src={iconTrash}
+                            alt=""
+                            className="trace-selector-item__delete-icon"
+                            aria-hidden
+                          />
+                        </button>
+                      )}
                     </div>
                   </div>
                   <TraceMinimapPreview nodes={nodes} edges={edges} summary={summaries[t.trace_id]} />
-                  <div className="trace-selector-item__footer">
-                    <span className="trace-selector-item__events">
-                      {t.event_count} events
-                    </span>
-                  </div>
-                </button>
+                </div>
               );
             })
           )}
