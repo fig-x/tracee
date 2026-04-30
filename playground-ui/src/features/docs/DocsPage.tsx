@@ -31,6 +31,7 @@ import promptsLeftRailImg from "./img/prompts-left-rail.png";
 import promptsVersionHistoryImg from "./img/prompts-version-history.png";
 import promptsDiffViewImg from "./img/prompts-diff-view.png";
 import loopDiagramImg from "./img/loop-diagram.png";
+import stateScrubberImg from "./img/state_scrubber.png";
 
 /* ── types ─────────────────────────────────────────── */
 interface TocEntry { id: string; label: string; depth?: number }
@@ -604,10 +605,125 @@ function GraphPage() {
 
       <h4 id="operations-timeline" className="docs__h4-title">Operations timeline</h4>
       <p className="docs__prose">
-        Every operation the agent performed is plotted against time. Each segment represents an LLM call, tool call,
-        RAG retrieval, or other operation. Hover over any segment to see its duration and details.
+        Every operation the agent performed inside a single node invocation is plotted against time as a
+        horizontal sequence. Each segment is color-coded by type — <strong>LLM call</strong>,
+        <strong> tool call</strong>, <strong> RAG retrieval</strong>, <strong> code execution</strong>,
+        <strong> subgraph call</strong>, or <strong>state update</strong> — and segment width reflects
+        relative latency. Hover any segment to see its duration; click to open a detail card with the exact
+        input, output, and metadata for that operation.
       </p>
-      <ScreenshotPlaceholder title="Operations timeline — detail view" guidance="Execution detail: horizontal timeline of operations with timing and type labels." src={executionTimelineImg} />
+      <ScreenshotPlaceholder title="Operations timeline — detail view" guidance="Execution detail: horizontal timeline of operations with timing and type labels. Each segment is color-coded by operation type." src={executionTimelineImg} />
+
+      <Callout type="info" title="Why state visibility matters in LangGraph">
+        <p>
+          LangGraph models a workflow as a graph of nodes that read from and write to a shared <strong>state
+          object</strong>. That state — defined by your <code>StateGraph</code> schema and accessed through
+          <strong> state keys</strong> like <code>messages</code>, <code>plan</code>, or <code>retrieved_docs</code> —
+          is the only thing nodes pass between each other. Every routing decision, every conditional edge,
+          and every downstream agent's behavior is determined by what is written into those keys.
+        </p>
+        <p>
+          In practice, this means most agent bugs are really <em>state bugs</em>: a node wrote the wrong shape
+          into a key, overwrote a list it should have appended to, or left a key empty when a downstream
+          conditional expected it to be populated. But typical LangGraph applications give you almost no
+          visibility into this — you see the final output, maybe a stream of messages, and have to reason
+          backwards about which node mutated which key and when.
+        </p>
+      </Callout>
+
+      <p className="docs__prose">
+        This is why Tracee surfaces <strong>state updates</strong> as first-class operations on the timeline.
+        Each <code>state_update</code> segment marks a moment where the node wrote back to the shared state,
+        and selecting it shows you exactly which state keys changed in that write — both the <em>before</em>
+        and <em>after</em> values for every modified key. You can scrub through a node's operations and watch
+        how <code>messages</code>, <code>plan</code>, or any custom key in your schema evolves call by call,
+        instead of inferring it from the final output.
+      </p>
+
+      <ScreenshotPlaceholder
+        title="State timeline scrubber — Time frame control"
+        guidance="The Time frame scrubber above the graph: numbered frame segments, Show all / Prev / Next buttons, and the active frame label."
+        src={stateScrubberImg}
+      />
+
+      <p className="docs__prose">
+        Above the graph canvas sits the <strong>Time frame</strong> scrubber — a horizontal timeline of every
+        state transition that occurred during the run. Each numbered segment is one frame: the moment a node
+        finished writing back to the shared state. Segment width reflects how long that step took, and the
+        header shows <em>current frame / total frames · node label</em> so you always know where you are.
+        The scrubber works hand-in-hand with the canvas — as you move through frames, the graph re-renders
+        to reflect the state of the world at that exact moment.
+      </p>
+
+      <h5 className="docs__h4-title">Scrubber controls</h5>
+      <ul className="docs__list">
+        <li>
+          <strong>Show all</strong> — clears the active frame and returns the canvas to its full-trace view.
+          Every node that was invoked at any point in the run is displayed in its completed style; nothing
+          is dimmed for "not yet executed". Use this to step back from frame-by-frame inspection and see the
+          trace as a whole.
+        </li>
+        <li>
+          <strong>Prev</strong> — moves the playhead one frame earlier. If no frame is currently active
+          (you're in <em>Show all</em> mode), the first click jumps to the <em>last</em> frame so you can
+          rewind from the end. Disabled when there are no frames.
+        </li>
+        <li>
+          <strong>Next</strong> — moves the playhead one frame later. Disabled at the final frame and when no
+          frame is active.
+        </li>
+        <li>
+          <strong>Click any segment</strong> — jumps directly to that frame. The clicked segment becomes the
+          <em> current </em>frame; everything to its left is treated as <em>completed</em>, everything to its
+          right is <em>upcoming</em>.
+        </li>
+        <li>
+          <strong>Hover a segment</strong> — surfaces a tooltip with the node label and step duration. Useful
+          when many short frames are squeezed together and labels can't fit inline.
+        </li>
+      </ul>
+
+      <h5 className="docs__h4-title">What the canvas does as you scrub</h5>
+      <p className="docs__prose">
+        Every frame maps each node on the graph to one of four states, and the canvas styles them
+        accordingly:
+      </p>
+      <ul className="docs__list">
+        <li>
+          <strong>Active</strong> — the node that wrote the current frame. It receives a highlighted accent
+          treatment so your eye locks onto where the action is happening right now.
+        </li>
+        <li>
+          <strong>Completed</strong> — nodes that ran in earlier frames. They render in full color with their
+          execution metrics visible, so you can still read what they produced up to this point.
+        </li>
+        <li>
+          <strong>Upcoming</strong> — nodes that will execute in later frames but haven't yet at this point in
+          time. They are <em>dimmed</em> on the canvas, and their detail panel shows "not yet invoked"
+          instead of stale metrics.
+        </li>
+        <li>
+          <strong>Idle</strong> — nodes that were never invoked in this trace at all (an unexplored branch of
+          the topology). They stay dimmed across every frame.
+        </li>
+      </ul>
+      <p className="docs__prose">
+        Selecting a frame also <strong>scopes the execution detail panel</strong> to that node's invocation,
+        so the operations timeline below updates to show only the LLM calls, tool calls, and state updates
+        that belong to that specific step. Combined, the scrubber turns a static trace into a replayable
+        sequence — you can step forward one write at a time and watch state propagate through the graph in
+        causal order.
+      </p>
+
+      <Callout type="tip" title="Reading the timeline">
+        <p>
+          A common debugging pattern: use <strong>Next</strong> to step forward one frame at a time, and at
+          each step open the active node's detail panel to inspect the <code>state_update</code> operation.
+          When a downstream conditional edge takes the wrong branch, you'll see exactly which earlier frame
+          wrote the bad value into the shared key.
+        </p>
+
+      </Callout>
 
       <h3 id="cognition-layer" className="docs__subsection-title">Cognition layer</h3>
       <p className="docs__prose">

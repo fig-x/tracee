@@ -91,41 +91,17 @@ const FALLBACK_PROVIDER_MODELS: Record<string, string[]> = {
 const DEFAULT_PROMPT_COMPONENTS: PromptComponent[] = [
   {
     type: 'role',
-    content: 'You are a precise data extraction assistant.',
+    content: 'You are a helpful chatbot.',
     enabled: true,
   },
   {
     type: 'task',
-    content: [
-      'Read the release brief in {{release_brief}} and extract the requested fields.',
-      'Use these rules exactly:',
-      '- product_name: trimmed text after "Product:"',
-      '- owner: trimmed text after "Owner:"',
-      '- launch_date: trimmed text after "Launch date:"',
-      '- approval_required: true only if the approval line says "yes"; otherwise false',
-      '- blocker_count: 0 if blockers says "none"; otherwise count the semicolon-separated blockers',
-      '- is_blocked: true if blocker_count is greater than 0, otherwise false',
-      '- is_high_risk: true if approval_required is true or blocker_count is 2 or more; otherwise false',
-      'Do not infer extra information and do not rewrite extracted values.',
-    ].join('\n'),
-    enabled: true,
-  },
-  {
-    type: 'outputs',
-    content: 'Return valid JSON only and follow the schema exactly.',
+    content: 'Answer the user message clearly and concisely.',
     enabled: true,
   },
 ];
 
-const DEFAULT_INPUT_VARS: Record<string, string> = {
-  release_brief: [
-    'Product: smart meeting recap',
-    'Owner: maya chen',
-    'Launch date: 2026-04-15',
-    'Approval: yes',
-    'Blockers: api latency spike; missing mobile qa signoff',
-  ].join('\n'),
-};
+const DEFAULT_INPUT_VARS: Record<string, string> = {};
 
 const TOOL_NAME_REGEX = /^[A-Za-z0-9_-]{1,64}$/;
 const TOOL_ARGUMENT_NAME_REGEX = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -188,57 +164,7 @@ const PANEL_SUMMARIES: Record<WorkspacePanel, { eyebrow: string; description: st
 };
 
 function createDefaultSchemaProperties(): SchemaProperty[] {
-  return [
-    {
-      ...createSchemaProperty(),
-      name: 'product_name',
-      type: 'string',
-      description: 'exact product name from the brief',
-      required: true,
-    },
-    {
-      ...createSchemaProperty(),
-      name: 'owner',
-      type: 'string',
-      description: 'exact owner name from the brief',
-      required: true,
-    },
-    {
-      ...createSchemaProperty(),
-      name: 'launch_date',
-      type: 'string',
-      description: 'exact launch date from the brief',
-      required: true,
-    },
-    {
-      ...createSchemaProperty(),
-      name: 'approval_required',
-      type: 'boolean',
-      description: 'true when approval is yes',
-      required: true,
-    },
-    {
-      ...createSchemaProperty(),
-      name: 'blocker_count',
-      type: 'integer',
-      description: 'number of blockers listed in the brief',
-      required: true,
-    },
-    {
-      ...createSchemaProperty(),
-      name: 'is_blocked',
-      type: 'boolean',
-      description: 'true when blocker_count > 0',
-      required: true,
-    },
-    {
-      ...createSchemaProperty(),
-      name: 'is_high_risk',
-      type: 'boolean',
-      description: 'true when approval is yes or blocker_count >= 2',
-      required: true,
-    },
-  ];
+  return [];
 }
 
 function schemaPropertiesFromOutputSchema(
@@ -451,7 +377,7 @@ const PromptForm: React.FC<Props> = ({
   const [isRunCountOpen, setIsRunCountOpen] = React.useState(false);
   const runCountRef = React.useRef<HTMLDivElement>(null);
 
-  const [schemaEnabled, setSchemaEnabled] = React.useState(true);
+  const [schemaEnabled, setSchemaEnabled] = React.useState(false);
   const [schemaProperties, setSchemaProperties] = React.useState<SchemaProperty[]>(() => createDefaultSchemaProperties());
   const [tools, setTools] = React.useState<PromptTool[]>([]);
 
@@ -561,7 +487,7 @@ const PromptForm: React.FC<Props> = ({
     setSchemaEnabled(enabled);
 
     if (enabled && schemaProperties.length === 0) {
-      setSchemaProperties(createDefaultSchemaProperties());
+      setSchemaProperties([createSchemaProperty()]);
     }
   };
 
@@ -942,7 +868,7 @@ const PromptForm: React.FC<Props> = ({
     setInputVars(DEFAULT_INPUT_VARS);
     setTools([]);
     setToolError(null);
-    setSchemaEnabled(true);
+    setSchemaEnabled(false);
     setSchemaProperties(createDefaultSchemaProperties());
     setRevisionNote('');
     setAppliedTemplateId(null);

@@ -244,3 +244,149 @@ class TestRawCallbackHandler:
         start_event = self.sink.events[0]
         end_event = self.sink.events[1]
         assert start_event.span_id == end_event.span_id
+
+
+class TestLLMEndProviderNormalization:
+    """on_llm_end should capture provider-agnostic fields from AIMessage.
+
+    LangChain normalizes tool_calls and usage_metadata across OpenAI, Anthropic,
+    and Gemini onto AIMessage, so the callback only needs to read those canonical
+    fields rather than parse raw provider payloads.
+    """
+
+    def setup_method(self):
+        self.execution_id = generate_execution_id()
+        self.trace_id = generate_trace_id()
+        self.sink = ListSink()
+        self.handler = RawCallbackHandler(
+            execution_id=self.execution_id,
+            trace_id=self.trace_id,
+            event_sink=self.sink,
+        )
+
+    def _emit_end_with_message(self, message):
+        """Helper: emit on_llm_end with a ChatGeneration carrying the given message."""
+        from langchain_core.outputs import ChatGeneration, LLMResult
+
+        run_id = uuid4()
+        result = LLMResult(generations=[[ChatGeneration(message=message)]])
+        self.handler.on_llm_end(response=result, run_id=run_id)
+        return self.sink.events[-1]
+
+    def test_captures_tool_calls_from_aimessage(self):
+        """Canonical tool_calls on AIMessage are mirrored into payload."""
+        from langchain_core.messages import AIMessage
+
+        message = AIMessage(
+            content="",
+            tool_calls=[
+                {
+                    "id": "call_abc",
+                    "name": "get_weather",
+                    "args": {"city": "SF"},
+                }
+            ],
+        )
+
+        event = self._emit_end_with_message(message)
+
+        captured = event.payload.get("tool_calls")
+        assert isinstance(captured, list) and len(captured) == 1
+        assert captured[0]["id"] == "call_abc"
+        assert captured[0]["name"] == "get_weather"
+        assert captured[0]["args"] == {"city": "SF"}
+
+    def test_tool_calls_absent_when_message_has_none(self):
+        """When the model didn't call a tool, payload tool_calls is empty list."""
+        from langchain_core.messages import AIMessage
+
+        event = self._emit_end_with_message(AIMessage(content="hello"))
+
+        assert event.payload.get("tool_calls") == []
+
+    def test_captures_usage_metadata_canonical_keys(self):
+        """LangChain-canonical usage_metadata is captured verbatim.
+
+        OpenAI, Anthropic, and Gemini all populate this on AIMessage with the
+        same keys: input_tokens, output_tokens, total_tokens.
+        """
+        from langchain_core.messages import AIMessage
+
+        message = AIMessage(
+            content="hi",
+            usage_metadata={
+                "input_tokens": 12,
+                "output_tokens": 4,
+                "total_tokens": 16,
+            },
+        )
+
+        event = self._emit_end_with_message(message)
+
+        assert event.payload.get("usage_metadata") == {
+            "input_tokens": 12,
+            "output_tokens": 4,
+            "total_tokens": 16,
+        }
+
+    def test_legacy_token_usage_still_captured(self):
+        """Existing token_usage from llm_output is preserved for backward compat."""
+        from langchain_core.messages import AIMessage
+        from langchain_core.outputs import ChatGeneration, LLMResult
+
+        run_id = uuid4()
+        result = LLMResult(
+            generations=[[ChatGeneration(message=AIMessage(content="hi"))]],
+            llm_output={"token_usage": {"prompt_tokens": 5, "completion_tokens": 2}},
+        )
+        self.handler.on_llm_end(response=result, run_id=run_id)
+
+        event = self.sink.events[-1]
+        assert event.payload["token_usage"] == {"prompt_tokens": 5, "completion_tokens": 2}
+
+    def test_anthropic_shaped_message_normalizes_correctly(self):
+        """Anthropic responses arrive with same canonical AIMessage fields."""
+        from langchain_core.messages import AIMessage
+
+        message = AIMessage(
+            content="Let me check.",
+            tool_calls=[
+                {"id": "toolu_01ABC", "name": "search", "args": {"q": "weather"}}
+            ],
+            usage_metadata={"input_tokens": 25, "output_tokens": 11, "total_tokens": 36},
+        )
+
+        event = self._emit_end_with_message(message)
+
+        assert event.payload["tool_calls"][0]["id"] == "toolu_01ABC"
+        assert event.payload["usage_metadata"]["input_tokens"] == 25
+
+    def test_gemini_shaped_message_normalizes_correctly(self):
+        """Gemini responses populate the same canonical AIMessage fields."""
+        from langchain_core.messages import AIMessage
+
+        message = AIMessage(
+            content="",
+            tool_calls=[
+                {"id": "func_call_1", "name": "get_time", "args": {}}
+            ],
+            usage_metadata={"input_tokens": 20, "output_tokens": 7, "total_tokens": 27},
+        )
+
+        event = self._emit_end_with_message(message)
+
+        assert event.payload["tool_calls"][0]["name"] == "get_time"
+        assert event.payload["usage_metadata"]["total_tokens"] == 27
+
+    def test_non_chat_generation_does_not_crash(self):
+        """Plain Generation (no message) should still emit event without tool_calls."""
+        from langchain_core.outputs import Generation, LLMResult
+
+        run_id = uuid4()
+        result = LLMResult(generations=[[Generation(text="plain completion")]])
+        self.handler.on_llm_end(response=result, run_id=run_id)
+
+        event = self.sink.events[-1]
+        assert event.payload["output_text"] == "plain completion"
+        assert event.payload.get("tool_calls") == []
+        assert event.payload.get("usage_metadata") is None

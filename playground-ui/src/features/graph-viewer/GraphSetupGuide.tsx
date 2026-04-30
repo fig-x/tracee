@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 const registrationSnippet = [
   "import tracee",
   "",
@@ -62,6 +64,9 @@ export function GraphSetupGuide({ onRefresh }: GraphSetupGuideProps) {
           <button type="button" className="graph-setup-guide__button" onClick={onRefresh}>
             check again
           </button>
+          <Link to="/docs" className="graph-setup-guide__link">
+            read the setup guide →
+          </Link>
           <p className="graph-setup-guide__hint">
             Tracee reads registered topologies from <code>/api/graphs</code>.
           </p>

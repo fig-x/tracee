@@ -44,6 +44,12 @@ export function AppShell() {
             end
             to="."
           >
+            Docs
+          </NavLink>
+          <NavLink
+            className={({ isActive }) => `app-shell__link${isActive ? " is-active" : ""}`}
+            to="graph"
+          >
             Graph
           </NavLink>
           <NavLink
@@ -57,12 +63,6 @@ export function AppShell() {
             to="prompts"
           >
             Prompts
-          </NavLink>
-          <NavLink
-            className={({ isActive }) => `app-shell__link${isActive ? " is-active" : ""}`}
-            to="docs"
-          >
-            Docs
           </NavLink>
         </div>
         {showKeyBanner && (

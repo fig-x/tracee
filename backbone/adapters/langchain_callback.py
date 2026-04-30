@@ -247,12 +247,23 @@ class RawCallbackHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Capture LLM end event."""
-        # extract generation text
         output_text = ""
-        if response.generations and response.generations[0]:
-            output_text = response.generations[0][0].text
+        tool_calls: list[dict[str, Any]] = []
+        usage_metadata: dict[str, Any] | None = None
 
-        # extract token usage if available
+        if response.generations and response.generations[0]:
+            generation = response.generations[0][0]
+            output_text = generation.text
+            # ChatGeneration carries an AIMessage with LangChain-canonical
+            # tool_calls and usage_metadata that are populated consistently
+            # by OpenAI, Anthropic, and Gemini integrations.
+            message = getattr(generation, "message", None)
+            if message is not None:
+                tool_calls = _sanitize_for_json(getattr(message, "tool_calls", None) or [])
+                raw_usage = getattr(message, "usage_metadata", None)
+                if raw_usage:
+                    usage_metadata = _sanitize_for_json(dict(raw_usage))
+
         token_usage = None
         if response.llm_output and "token_usage" in response.llm_output:
             token_usage = response.llm_output["token_usage"]
@@ -264,6 +275,8 @@ class RawCallbackHandler(BaseCallbackHandler):
             payload={
                 "output_text": output_text,
                 "token_usage": token_usage,
+                "usage_metadata": usage_metadata,
+                "tool_calls": tool_calls,
                 "tags": tags,
             },
         )

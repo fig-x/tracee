@@ -393,6 +393,27 @@ export function ExecutionDetails({ node }: Props) {
                       <pre className="side-panel__pre">{outputLog.text}</pre>
                     )}
                   </div>
+                  {activeItem.toolCalls && activeItem.toolCalls.length > 0 && (
+                    <div className="side-panel__card">
+                      <div className="side-panel__card-label">tool calls</div>
+                      {activeItem.toolCalls.map((toolCall, index) => (
+                        <div
+                          key={toolCall.id ?? `${toolCall.name}-${index}`}
+                          className="side-panel__tool-call"
+                        >
+                          <div className="side-panel__tool-call-name">
+                            <span>{toolCall.name}</span>
+                            {toolCall.id && (
+                              <span className="side-panel__tool-call-id">{toolCall.id}</span>
+                            )}
+                          </div>
+                          <pre className="side-panel__pre">
+                            {JSON.stringify(toolCall.args ?? {}, null, 2)}
+                          </pre>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="side-panel__card">
                     <div className="side-panel__card-label">metadata</div>
                     {metadataLog.empty ? (

@@ -19,6 +19,7 @@ import {
   parseTimestampMs,
   resolveAgentNodeId,
 } from "../utils/traceEventUtils";
+import { normalizeLLMEndPayload } from "../utils/traceNormalize";
 
 /**
  * groups trace events by their langgraph node and computes per-node execution data.
@@ -230,12 +231,15 @@ export function computeOverlay(events: TraceEvent[], nodeIds: string[]): Map<str
         topLevelStartsByRunId.set(runId, event);
       }
       if (event.event_type === "on_llm_end") {
-        const tokenUsage = event.payload?.token_usage as Record<string, unknown> | undefined;
-        const promptTokens = typeof tokenUsage?.prompt_tokens === "number" ? tokenUsage.prompt_tokens : 0;
-        const completionTokens = typeof tokenUsage?.completion_tokens === "number" ? tokenUsage.completion_tokens : 0;
-        promptTokensTotal += promptTokens;
-        completionTokensTotal += completionTokens;
-        if (tokenUsage) hasAnyTokenUsage = true;
+        const normalized = normalizeLLMEndPayload(
+          event.payload as Record<string, unknown> | undefined,
+        );
+        const tokenUsage = normalized.tokenUsage;
+        if (tokenUsage) {
+          promptTokensTotal += tokenUsage.input;
+          completionTokensTotal += tokenUsage.output;
+          hasAnyTokenUsage = true;
+        }
 
         const start = event.span_id ? llmStartsBySpan.get(event.span_id) : undefined;
         const modelName = buildOperationLabel(start?.payload?.model_name ?? event.payload?.model_name, "llm");
@@ -245,7 +249,6 @@ export function computeOverlay(events: TraceEvent[], nodeIds: string[]): Map<str
         const startTags = start ? getEventTags(start) : [];
         const endTags = getEventTags(event);
         const inputPayload = start?.payload?.input ?? start?.payload?.messages ?? start?.payload?.prompts;
-        const outputPayload = event.payload?.output_text ?? event.payload?.output;
 
         operations.push({
           id: event.event_id,
@@ -253,14 +256,12 @@ export function computeOverlay(events: TraceEvent[], nodeIds: string[]): Map<str
           label: modelName,
           status: "success",
           latencyMs: opLatency,
-          tokenCount: promptTokens + completionTokens,
+          tokenCount: tokenUsage ? tokenUsage.total : undefined,
+          toolCalls: normalized.toolCalls.length > 0 ? normalized.toolCalls : undefined,
           input: normalizePayloadValue(inputPayload),
-          output: normalizePayloadValue(outputPayload),
+          output: normalizePayloadValue(normalized.outputText),
           metadata: {
             modelName,
-            finishReason: event.payload?.response_metadata
-              ? (event.payload.response_metadata as Record<string, unknown>).finish_reason
-              : undefined,
             tokenUsage,
             tags: [...startTags, ...endTags],
             ...getRunMeta(event),

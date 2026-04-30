@@ -1166,6 +1166,35 @@ html, body, #root {
   color: #ef4444;
 }
 
+.side-panel__tool-call {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0;
+  border-top: 1px solid #f3f4f6;
+}
+
+.side-panel__tool-call:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+
+.side-panel__tool-call-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.side-panel__tool-call-id {
+  font-size: 10px;
+  font-weight: 400;
+  color: #9ca3af;
+  font-family: ui-monospace, monospace;
+}
+
 .side-panel__op-meta {
   display: flex;
   align-items: center;
@@ -2254,6 +2283,26 @@ html, body, #root {
 .graph-setup-guide__button:focus-visible {
   outline: 3px solid rgba(33, 158, 188, 0.2);
   outline-offset: 2px;
+}
+
+.graph-setup-guide__link {
+  font-size: 13px;
+  font-weight: 600;
+  color: #219ebc;
+  text-decoration: none;
+  padding: 10px 4px;
+  transition: color 0.15s ease;
+}
+
+.graph-setup-guide__link:hover {
+  color: #1b8aa5;
+  text-decoration: underline;
+}
+
+.graph-setup-guide__link:focus-visible {
+  outline: 3px solid rgba(33, 158, 188, 0.2);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 
 .graph-setup-guide__hint {

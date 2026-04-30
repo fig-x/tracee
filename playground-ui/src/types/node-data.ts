@@ -42,6 +42,12 @@ export interface TraceOutlineItem {
 
 export type NodeFrameState = "active" | "completed" | "upcoming" | "idle";
 
+export interface NormalizedToolCall {
+  id?: string;
+  name: string;
+  args: unknown;
+}
+
 export interface AgentOperation {
   id: string;
   type: AgentOperationType;
@@ -49,6 +55,7 @@ export interface AgentOperation {
   status: "success" | "error";
   latencyMs?: number;
   tokenCount?: number;
+  toolCalls?: NormalizedToolCall[];
   input?: unknown;
   output?: unknown;
   metadata?: Record<string, unknown>;

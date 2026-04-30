@@ -14,7 +14,8 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<AppShell />}>
-              <Route index element={<GraphViewer />} />
+              <Route index element={<DocsPage />} />
+              <Route path="graph" element={<GraphViewer />} />
               <Route path="playground" element={<PlaygroundPage />} />
               <Route path="prompts" element={<PromptsPage />} />
               <Route path="docs" element={<DocsPage />} />
