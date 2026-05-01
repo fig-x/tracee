@@ -3509,9 +3509,8 @@
 }
 
 .prompt-resolved__textarea {
-  min-height: min(68vh, 720px);
   resize: none;
-  overflow: auto;
+  overflow: hidden;
   border-color: transparent;
   background: transparent;
   box-shadow: none;

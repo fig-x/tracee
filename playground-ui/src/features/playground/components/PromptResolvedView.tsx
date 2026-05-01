@@ -1,5 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import iconCopy from '../../../assets/icon-copy.svg';
+import { resizeTextarea } from '../../../utils/resizeTextarea';
 
 interface Props {
   resolvedPrompt: string;
@@ -14,6 +15,11 @@ function getMaskIconStyle(icon: string): React.CSSProperties {
 
 const PromptResolvedView: React.FC<Props> = ({ resolvedPrompt }) => {
   const [copied, setCopied] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    resizeTextarea(textareaRef.current);
+  }, [resolvedPrompt]);
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(resolvedPrompt);
@@ -52,9 +58,11 @@ const PromptResolvedView: React.FC<Props> = ({ resolvedPrompt }) => {
       </div>
       <div className="card__body prompt-resolved__body">
         <textarea
+          ref={textareaRef}
           className="textarea textarea--code prompt-resolved__textarea"
           value={resolvedPrompt}
           readOnly
+          rows={1}
           aria-label="resolved prompt"
         />
       </div>

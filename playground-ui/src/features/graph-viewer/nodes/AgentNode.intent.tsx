@@ -10,10 +10,11 @@ export function IntentContent({ data }: Props) {
   const { metadata, promptId, components } = data;
   const enabledComponents = components?.filter((c) => c.enabled) ?? [];
   const disabledComponents = components?.filter((c) => !c.enabled) ?? [];
+  const hasComponents = Boolean(components && components.length > 0);
 
   return (
     <>
-      <div className="agent-node__body">
+      <div className={`agent-node__body${hasComponents ? "" : " agent-node__body--last"}`}>
         {metadata?.model && (
           <div className="agent-node__row">
             <span className="agent-node__key">model</span>

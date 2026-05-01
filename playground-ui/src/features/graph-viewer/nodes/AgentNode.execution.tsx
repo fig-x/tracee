@@ -63,7 +63,7 @@ export function ExecutionContent({ data }: Props) {
     const frameState = data.playback?.frameState;
     const statusLabel = frameState === "upcoming" ? "not yet invoked" : "not invoked";
     return (
-      <div className="agent-node__body">
+      <div className="agent-node__body agent-node__body--last">
         <div className="agent-node__row">
           <span className="agent-node__key">status</span>
           <span className="agent-node__value" style={{ color: "#9ca3af" }}>{statusLabel}</span>
@@ -74,7 +74,7 @@ export function ExecutionContent({ data }: Props) {
 
   return (
     <>
-      <div className={`agent-node__body${hasOperations ? " agent-node__body--with-ops" : ""}`}>
+      <div className={`agent-node__body${hasOperations ? " agent-node__body--with-ops" : ""}${hasOperations || hasSchemaValidation ? "" : " agent-node__body--last"}`}>
         <div className="agent-node__row">
           <span className="agent-node__key">status</span>
           <span

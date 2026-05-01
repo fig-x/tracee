@@ -8,6 +8,7 @@ import {
   resolvePromptMessages,
   serializePromptMessages,
 } from './promptEditor';
+import { resizeTextarea } from '../../utils/resizeTextarea';
 import PromptVersionTree from './components/PromptVersionTree';
 import PromptResolvedView from './components/PromptResolvedView';
 import PromptDiffWorkspace from './components/PromptDiffWorkspace';
@@ -745,11 +746,12 @@ const ComponentsView: React.FC<{ version: PromptVersion }> = ({ version }) => {
           </div>
           <div className="prompt-components__body">
             <textarea
+              ref={(el) => resizeTextarea(el)}
               className="textarea textarea--code"
               value={comp.content}
               readOnly
-              rows={comp.content.split('\n').length}
-              style={{ resize: 'none' }}
+              rows={1}
+              style={{ resize: 'none', overflow: 'hidden' }}
             />
           </div>
         </div>
