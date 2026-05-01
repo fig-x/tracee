@@ -11,10 +11,10 @@ describe("GraphSetupGuide", () => {
       </MemoryRouter>,
     );
 
-    expect(markup).toContain("Register your workflow to unlock the graph view");
+    expect(markup).toContain("No graph registered yet");
+    expect(markup).toContain("pip install git+https://github.com/fig-x/tracee.git");
     expect(markup).toContain("tracee.init(");
     expect(markup).toContain("with tracee.trace():");
-    expect(markup).toContain("optional metadata");
-    expect(markup).toContain("read the setup guide");
+    expect(markup).toContain("Read the full setup guide");
   });
 });

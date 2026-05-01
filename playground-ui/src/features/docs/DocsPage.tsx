@@ -58,6 +58,7 @@ const pages: PageDef[] = [
       { id: "install", label: "Install dependencies" },
       { id: "start-server", label: "Start the server" },
       { id: "configure-env", label: "Configure environment" },
+      { id: "install-sdk", label: "Install the SDK in your app" },
       { id: "instrument-app", label: "Instrument your app" },
       { id: "verify", label: "Verify the connection" },
     ],
@@ -126,6 +127,7 @@ const pages: PageDef[] = [
 
 /* ── code snippets ─────────────────────────────────── */
 const cloneSnippet = `git clone https://github.com/fig-x/tracee.git\ncd tracee`;
+const sdkInstallSnippet = `pip install git+https://github.com/fig-x/tracee.git`;
 const installSnippet = `uv sync --extra server`;
 const startServerSnippet = `uv run tracee serve`;
 const envSnippet = `# .env (in the directory where you run tracee serve)
@@ -508,7 +510,26 @@ function SetupPage() {
         </p>
       </Callout>
 
-      <h3 id="instrument-app" className="docs__subsection-title">5. Instrument your LangGraph app</h3>
+      <h3 id="install-sdk" className="docs__subsection-title">5. Install the Tracee SDK in your app</h3>
+      <p className="docs__prose">
+        Steps 1–4 install Tracee inside this repository so you can run the server.
+        To instrument your own LangGraph application, you also need the <code>tracee</code> Python
+        package available <strong>in your app's environment</strong> — that's what provides
+        <code> tracee.init()</code> and <code>tracee.trace()</code> so <code>import tracee</code> resolves.
+      </p>
+      <p className="docs__prose">
+        From inside your application's project (not this repo), run:
+      </p>
+      <CodeBlock code={sdkInstallSnippet} label="install the Tracee SDK in your app's environment" />
+      <Callout type="info" title="Why a separate install?">
+        <p>
+          The cloned repo runs the Tracee server (UI + API at <code>http://localhost:8000</code>).
+          Your application is a different process — usually a different virtualenv — and needs the SDK
+          installed there so it can publish its graph topology and stream traces to that server.
+        </p>
+      </Callout>
+
+      <h3 id="instrument-app" className="docs__subsection-title">6. Instrument your LangGraph app</h3>
       <p className="docs__prose">Import <code>tracee</code>, register the compiled graph, and wrap invocations with <code>tracee.trace()</code>.</p>
       <CodeBlock code={integrationSnippet} label="full integration example" />
       <Callout type="tip" title="What each call does">
@@ -518,7 +539,7 @@ function SetupPage() {
         </p>
       </Callout>
 
-      <h3 id="verify" className="docs__subsection-title">6. Verify the connection</h3>
+      <h3 id="verify" className="docs__subsection-title">7. Verify the connection</h3>
       <p className="docs__prose">After running your instrumented app at least once:</p>
       <ol className="docs__steps">
         <li className="docs__step">
@@ -563,7 +584,21 @@ function GraphPage() {
       </ul>
 
       <h3 id="graph-registration" className="docs__subsection-title">Registering a graph</h3>
-      <p className="docs__prose">Register your compiled LangGraph workflow with the Tracee server to publish its topology.</p>
+      <p className="docs__prose">
+        Before you can register a graph, the Tracee SDK must be installed in your application's
+        environment so <code>import tracee</code> resolves. From inside your app's project (not the
+        cloned server repo), run:
+      </p>
+      <CodeBlock code={sdkInstallSnippet} label="install the Tracee SDK in your app's environment" />
+      <Callout type="info" title="Why a separate install?">
+        <p>
+          The cloned repo runs the Tracee server (UI + API at <code>http://localhost:8000</code>).
+          Your application is a different process — usually a different virtualenv — and needs the SDK
+          installed there to publish its graph topology and stream traces to that server. See
+          <a href="#install-sdk"> Setup Guide → Install the SDK in your app</a> for the full step.
+        </p>
+      </Callout>
+      <p className="docs__prose">Then register your compiled LangGraph workflow with the Tracee server to publish its topology.</p>
       <CodeBlock code={registrationSnippet} label="graph registration" />
       <Callout type="tip" title="Enrich agent cards with metadata">
         <p>

@@ -68,7 +68,19 @@ The server loads a `.env` file from the working directory on startup.
 OPENAI_API_KEY=sk-...
 ```
 
-### 5. Instrument your LangGraph app
+### 5. Install the Tracee SDK in your app
+
+The steps above install Tracee inside this repository so you can run the server. To instrument your own LangGraph application, you also need the `tracee` Python package available **in your app's environment** — that's what provides `tracee.init()` and `tracee.trace()` for `import tracee` to resolve.
+
+From inside your application's project (not this repo), run:
+
+```bash
+pip install git+https://github.com/fig-x/tracee.git
+```
+
+> **Why a separate install?** The cloned repo runs the Tracee server (UI + API at `http://localhost:8000`). Your application is a different process — usually a different virtualenv — and needs the SDK installed there so it can publish its graph topology and stream traces to that server.
+
+### 6. Instrument your LangGraph app
 
 Import `tracee`, register the compiled graph, and wrap invocations with `tracee.trace()`.
 

@@ -1520,7 +1520,20 @@ const PromptForm: React.FC<Props> = ({
     <div>
       <div className="card">
         <div className="card__body">
-          <form onSubmit={handleSubmit} className="flex-col create-run__form">
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={(event) => {
+              if (
+                event.key === 'Enter' &&
+                !event.shiftKey &&
+                !(event.metaKey || event.ctrlKey) &&
+                (event.target as HTMLElement).tagName === 'INPUT'
+              ) {
+                event.preventDefault();
+              }
+            }}
+            className="flex-col create-run__form"
+          >
             <div className={`playground-shell playground-shell--${mode}`}>
               <aside className="playground-shell__rail">
                 <div className="card">
