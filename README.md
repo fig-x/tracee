@@ -49,12 +49,13 @@ uv sync --extra server
 
 ### 3. Configure environment
 
-The server loads a `.env` file from the working directory on startup.
+Export your OpenAI API key in the shell where you'll run `tracee serve`:
 
 ```bash
-# .env (in the directory where you run tracee serve)
-OPENAI_API_KEY=sk-...
+export OPENAI_API_KEY=sk-...
 ```
+
+> **Optional:** Instead of exporting, you can create a `.env` file in the directory where you run `tracee serve` with `OPENAI_API_KEY=sk-...` — the server will load it automatically on startup.
 
 ### 4. Start the server
 
