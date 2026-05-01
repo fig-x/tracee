@@ -4,6 +4,7 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 dist/
+!playground-ui/dist/
 build/
 *.egg
 .venv/
@@ -11,6 +12,7 @@ venv/
 
 # node
 node_modules/
+.vite/
 
 # ide
 .vscode/
@@ -23,12 +25,16 @@ Thumbs.db
 # env
 .env
 .env.*
+!.env.example
 
 # db
 *.db
 *.db-journal
 *.sqlite
 *.sqlite3
+
+# claude code
+.claude/
 
 # misc
 *.log
