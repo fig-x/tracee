@@ -17,6 +17,7 @@ import type { JsonSchema } from '../../types/schema';
 import iconCompare from '../../assets/icon-compare.svg';
 import iconPlayground from '../../assets/icon-playground.svg';
 import iconTrash from '../../assets/icon-trash.svg';
+import iconCode from '../../assets/icon-code.svg';
 
 type SortKey = 'name' | 'updated_at' | 'version_count';
 type SortDir = 'asc' | 'desc';
@@ -33,11 +34,25 @@ interface DeleteTarget {
   version: PromptVersion | null;
 }
 
+interface ExportTarget {
+  promptId: string;
+  promptName: string;
+  versionId: string;
+}
+
 function getMaskIconStyle(icon: string): React.CSSProperties {
   return {
     WebkitMaskImage: `url("${icon}")`,
     maskImage: `url("${icon}")`,
   };
+}
+
+function buildExportSnippet(promptId: string, versionId: string): string {
+  return `from tracee import PromptLoader
+
+loader = PromptLoader(base_url="http://localhost:8000")
+
+prompt_text = loader.get(${JSON.stringify(promptId)}, ${JSON.stringify(versionId)})`;
 }
 
 export function PromptsPage() {
@@ -56,6 +71,9 @@ export function PromptsPage() {
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const [exportTarget, setExportTarget] = useState<ExportTarget | null>(null);
+  const [exportCopied, setExportCopied] = useState(false);
 
   const [activeVersionId, setActiveVersionId] = useState<string | null>(null);
   const [compareTarget, setCompareTarget] = useState<CompareTarget | null>(null);
@@ -482,6 +500,27 @@ export function PromptsPage() {
                               <span>Clear compare</span>
                             </button>
                           )}
+                          <button
+                            type="button"
+                            className="btn btn--secondary btn--sm prompts-page__action-btn"
+                            onClick={() => {
+                              if (!effectiveVersion) return;
+                              setExportCopied(false);
+                              setExportTarget({
+                                promptId: detail.prompt.prompt_id,
+                                promptName: detail.prompt.name,
+                                versionId: effectiveVersion.version_id,
+                              });
+                            }}
+                            disabled={!effectiveVersion}
+                          >
+                            <span
+                              className="prompts-page__action-icon"
+                              style={getMaskIconStyle(iconCode)}
+                              aria-hidden
+                            />
+                            <span>Export</span>
+                          </button>
                           <Link
                             to={effectiveVersion
                               ? `/playground?promptId=${encodeURIComponent(detail.prompt.prompt_id)}&versionId=${encodeURIComponent(effectiveVersion.version_id)}`
@@ -625,6 +664,55 @@ export function PromptsPage() {
           </div>
         </div>
       )}
+
+      {/* export-to-code dialog */}
+      {exportTarget && (() => {
+        const snippet = buildExportSnippet(exportTarget.promptId, exportTarget.versionId);
+        const closeExport = () => {
+          setExportTarget(null);
+          setExportCopied(false);
+        };
+        const handleCopy = () => {
+          if (!globalThis.navigator?.clipboard?.writeText) return;
+          void globalThis.navigator.clipboard.writeText(snippet);
+          setExportCopied(true);
+          globalThis.setTimeout(() => setExportCopied(false), 2000);
+        };
+        return (
+          <div className="prompts-dialog__backdrop" onClick={closeExport}>
+            <div
+              className="prompts-dialog prompts-dialog--wide"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="prompts-dialog__title">Export to code</div>
+              <div className="prompts-dialog__body">
+                Use the Tracee SDK to load this version of the prompt directly in your code.
+              </div>
+              <div className="prompts-dialog__meta">
+                <span>prompt_id <code>{exportTarget.promptId}</code></span>
+                <span>version_id <code>{exportTarget.versionId}</code></span>
+              </div>
+              <pre className="prompts-dialog__code">{snippet}</pre>
+              <div className="prompts-dialog__actions">
+                <button
+                  type="button"
+                  className="btn btn--secondary btn--sm"
+                  onClick={closeExport}
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--primary btn--sm"
+                  onClick={handleCopy}
+                >
+                  {exportCopied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

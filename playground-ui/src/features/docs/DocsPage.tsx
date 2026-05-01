@@ -108,6 +108,7 @@ const pages: PageDef[] = [
       { id: "version-tree", label: "Version tree" },
       { id: "components-resolved-diff", label: "Components / Resolved / Diff" },
       { id: "load-into-playground", label: "Loading into Playground" },
+      { id: "exporting-prompts", label: "Exporting to your codebase" },
     ],
   },
   {
@@ -1060,7 +1061,8 @@ function PromptsPage() {
       <h2 className="docs__section-title">Prompts</h2>
       <p className="docs__prose">
         A versioned library of every saved prompt, with three views — <strong>Components</strong>,
-        <strong> Resolved</strong>, and <strong>Diff</strong> — and direct loading into the Playground.
+        <strong> Resolved</strong>, and <strong>Diff</strong> — direct loading into the Playground,
+        and one-click <strong>export into your codebase</strong> via the Tracee SDK.
       </p>
 
       <h3 id="prompt-list" className="docs__subsection-title">Prompt list and search</h3>
@@ -1084,6 +1086,25 @@ function PromptsPage() {
       <p className="docs__prose">
         Click <strong>Load in Playground</strong> to open a version in the authoring workspace. The URL carries
         prompt and version IDs so you can share deep links.
+      </p>
+
+      <h3 id="exporting-prompts" className="docs__subsection-title">Exporting to your codebase</h3>
+      <p className="docs__prose">
+        Every saved prompt can be pulled into your application code with the Tracee Python SDK —
+        no copy-pasting prompt text. Click <strong>Export</strong> on any selected version to get a
+        ready-to-paste snippet that pins the exact <code>prompt_id</code> and <code>version_id</code>
+        you have open. At runtime the SDK fetches the prompt from the Tracee server, so updating a
+        prompt in the Playground is enough to ship a new version — your code does not need to change.
+      </p>
+      <CodeBlock
+        code={`from tracee import PromptLoader\n\nloader = PromptLoader(base_url="http://localhost:8000")\n\nprompt_text = loader.get("my-prompt", "v3")`}
+        label="Load a saved prompt at runtime"
+      />
+      <p className="docs__prose">
+        Pass <code>"latest"</code> as the second argument (or omit it) to always pull the most recent
+        version. When a version defines an output schema, use <code>loader.get_with_schema(...)</code>
+        to get the resolved text together with the schema for use with structured-output LLM clients.
+        Results are cached in-process, so repeated calls for the same version do not re-hit the server.
       </p>
     </>
   );
