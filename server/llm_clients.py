@@ -72,7 +72,8 @@ def get_openai_client():
                     "directory where you run `tracee serve`, then restart the server."
                 ),
             )
-        _openai_client = openai.AsyncOpenAI(api_key=api_key)
+        base_url = os.getenv("OPENAI_BASE_URL") or "https://us.api.openai.com/v1"
+        _openai_client = openai.AsyncOpenAI(api_key=api_key, base_url=base_url)
     return _openai_client
 
 

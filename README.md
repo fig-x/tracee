@@ -47,7 +47,16 @@ We recommend using [uv](https://docs.astral.sh/uv/) for fast, reliable dependenc
 uv sync --extra server
 ```
 
-### 3. Start the server
+### 3. Configure environment
+
+The server loads a `.env` file from the working directory on startup.
+
+```bash
+# .env (in the directory where you run tracee serve)
+OPENAI_API_KEY=sk-...
+```
+
+### 4. Start the server
 
 ```bash
 uv run tracee serve
@@ -58,15 +67,6 @@ On the first run, this automatically builds the frontend (`npm install` + `npm r
 Open `http://localhost:8000` in your browser. The Graph page will be empty until you register a workflow.
 
 > **Tip:** To force a frontend rebuild (e.g. after pulling new changes), delete `playground-ui/dist/` and re-run `tracee serve`. You can also pass `--skip-build` to skip the automatic build entirely.
-
-### 4. Configure environment
-
-The server loads a `.env` file from the working directory on startup.
-
-```bash
-# .env (in the directory where you run tracee serve)
-OPENAI_API_KEY=sk-...
-```
 
 ### 5. Install the Tracee SDK in your app
 
